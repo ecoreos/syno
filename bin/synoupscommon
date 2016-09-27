@@ -1,0 +1,125 @@
+#!/bin/sh
+# Copyright (c) 2000-2012 Synology Inc. All rights reserved.
+UPS_ROOT="/tmp/ups"
+UPS_LOCK=$UPS_ROOT"/ups.lock"
+
+if [ ! -d $UPS_ROOT ]; then
+	mkdir -p $UPS_ROOT
+fi
+
+SupportUPS=`/bin/get_key_value /etc.defaults/synoinfo.conf supportups`
+case "$SupportUPS" in
+[Yy][Ee][Ss])
+	;;
+*)
+	echo "UPS is not support here."
+	exit
+	;;
+esac
+
+EnableUPS=`/bin/get_key_value /etc/synoinfo.conf ups_enabled`
+case "$EnableUPS" in
+[Yy][Ee][Ss])
+	MasterEnabled=1;;
+*)
+	MasterEnabled=0;;
+esac
+
+EnableSlave=`/bin/get_key_value /etc/synoinfo.conf upsslave_enabled`
+case "$EnableSlave" in
+[Yy][Ee][Ss])
+	SlaveEnabled=1;;
+*)
+	SlaveEnabled=0;;
+esac
+
+UpsMode=`/bin/get_key_value /etc/synoinfo.conf ups_mode`
+# ups_mode will be empty when upgrade to 4.2
+if [ "x" = "x${UpsMode}" ]; then
+	UpsMode="usb"
+fi
+
+StatClient=`ps -aux |grep '/usr/sbin/upsmon'|grep -cv grep`
+
+SafeMV() {
+	mv $1 $2.$$
+	mv $2.$$ $2
+}
+
+UpdateUpsdConf() {
+	local RAD_F_LISTEN="/usr/syno/etc/ups/upsd.conf"
+	local RAD_V_IF_HEAD="Link encap"
+	local RAD_V_WL_HEAD="wlan"
+	local RAD_V_V6IP="inet6"
+	local RAD_V_V4IP="inet"
+	local IS_WLAN=0
+
+	echo "" > $RAD_F_LISTEN
+	ifconfig | while read LINE; do
+		if echo "$LINE"|grep -q "$RAD_V_IF_HEAD" && echo "$LINE"|grep -q "$RAD_V_WL_HEAD"; then
+			IS_WLAN=1
+		elif [ "x" == "x$LINE" ]; then
+			IS_WLAN=0
+		fi
+
+		if echo "$LINE"|grep -q "$RAD_V_V6IP"; then
+			# work around wifi ipv6 bind fail
+			if [ 0 == $IS_WLAN ];then
+				echo -e "LISTEN `echo $LINE|/usr/bin/awk '/inet6 /{print$3}'|/usr/bin/cut -d '/' -f 1`" >> $RAD_F_LISTEN
+			fi
+		elif echo "$LINE"|grep -q "$RAD_V_V4IP"; then
+			echo -e "LISTEN `echo $LINE|/usr/bin/awk '/inet /{print$2}'|/usr/bin/cut -d ':' -f 2`" >> $RAD_F_LISTEN
+		fi
+	done
+}
+
+StartServer() {
+	UpdateUpsdConf
+
+	local cntDaemon=`ps -aux |grep '/usr/sbin/upsd'|grep -cv grep`
+	if [ $cntDaemon -gt 0 ]; then
+		kill -HUP `cat /var/state/ups/upsd.pid`
+	else
+		/usr/sbin/upsd
+	fi
+}
+
+StartClient() {
+	local cntMon=`ps -aux |grep '/usr/sbin/upsmon'|grep -cv grep`
+	if [ $cntMon -gt 0 ]; then
+		kill -HUP `cat /var/run/upsmon.pid`
+	else
+		/usr/sbin/upsmon $1
+	fi
+}
+
+StopUps() {
+	ShowLog "Stop UPS Daemon"
+
+	killall upsmon > /dev/null 2>&1
+	killall upssched > /dev/null 2>&1
+	killall upsd > /dev/null 2>&1
+	/usr/bin/upsdrvctl stop
+
+	#we need to check the process stopped, in some low level DS, it sometimes costs much time
+	WaitStop	
+
+	return 0
+}
+
+WaitStop() {
+	for i in `seq 1 1 3`; do
+		sleep 3
+		local P_COUNT=`ps -aux |grep -E "(upsd|upsmon|a ups)"|grep -cv grep`
+		if [ 0 -eq $P_COUNT ]; then
+			return 0
+		fi
+	done
+	return 255
+}
+
+ShowLog() {
+	echo $1
+	logger -p err -- $1
+}
+

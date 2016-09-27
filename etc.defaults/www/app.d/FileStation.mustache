@@ -1,0 +1,81 @@
+{{#server}}
+    location ~ ^/volume(X|USB|SATA|Gluster)?\d+/ {
+        internal;
+
+        if ($upstream_http_x_accel_redirect ~ "^$") {
+            return 403;
+        }
+
+        root /;
+    }
+{{/server}}
+
+{{> /usr/syno/share/nginx/SynoSharing}}
+location ~ {{#alias}}/{{alias}}{{/alias}}/webman/modules/FileBrowser/index_ds.php$ {
+	default_type    text/html;
+	alias           /usr/syno/share/OAuth/index_ds.php;
+}
+
+location ~ ^{{#alias}}/{{alias}}{{/alias}}/wfmlogindialog.js(.*) {
+	root /usr/syno/synoman;
+	rewrite /wfmlogindialog.js(.*) /webfm/webUI/directlogin.js$1 break;
+}
+
+location ~ ^{{#alias}}/{{alias}}{{/alias}}/fbsharing/(.*)$ {
+	root /usr/syno/synoman;
+	rewrite /fbsharing/(.*)$ $scheme://$http_host/sharing/fbsharing-$1 break;
+}
+
+location ~ ^{{#alias}}/{{alias}}{{/alias}}/fsdownload/webapi/file_download\.cgi/(.*)$ {
+	root /usr/syno/synoman;
+	rewrite /fsdownload/webapi/file_download\.cgi/(.*)$ /webapi/_______________________________________________________entry.cgi?api=SYNO.FolderSharing.Download&version=2&method=download break;
+	scgi_param   REWRITE_APP "SYNO.SDS.App.FileStation3.Instance";
+	scgi_read_timeout   3600s;
+	{{> /usr/syno/share/nginx/cgi.pass}}
+}
+
+location ~ ^{{#alias}}/{{alias}}{{/alias}}/fsdownload/(webman|scripts|synoSDSjslib)/(.*)$ {
+	root /usr/syno/synoman;
+	rewrite /fsdownload/(.*)$ /$1 break;
+}
+
+location ~ ^{{#alias}}/{{alias}}{{/alias}}/fsdownload/webapi/(.*)$ {
+	root /usr/syno/synoman;
+	rewrite /fsdownload/(.*)$ /$1 break;
+	scgi_param   REWRITE_APP "SYNO.SDS.App.FileStation3.Instance";
+	scgi_read_timeout   3600s;
+	{{> /usr/syno/share/nginx/cgi.pass}}
+}
+
+location ~ ^{{#alias}}/{{alias}}{{/alias}}/fsdownload/([-_\w\d]+)/(.*)$ {
+	root /usr/syno/synoman;
+	rewrite /fsdownload/([-_\w\d]+)/(.*)$ /webapi/_______________________________________________________entry.cgi?api=SYNO.FileStation.Sharing.Download&version=1&method=download&_sharing_id="$1"&mode=download break;
+	scgi_param   REWRITE_APP "SYNO.SDS.App.FileStation3.Instance";
+	scgi_read_timeout   3600s;
+	{{> /usr/syno/share/nginx/cgi.pass}}
+}
+
+location ~ ^{{#alias}}/{{alias}}{{/alias}}/fbdownload/(.*)$ {
+	root /usr/syno/synoman;
+	rewrite /fbdownload/(.*)$ /webapi/_______________________________________________________entry.cgi?api=SYNO.FileStation.Download&version=2&method=download&mode=download&stdhtml=true break;
+	scgi_param   REWRITE_APP "SYNO.SDS.App.FileStation3.Instance";
+	scgi_read_timeout   3600s;
+	{{> /usr/syno/share/nginx/cgi.pass}}
+}
+
+location ~ ^{{#alias}}/{{alias}}{{/alias}}/fbgdrivedownload/(.*)$ {
+	root /usr/syno/synoman;
+	rewrite /fbgdrivedownload/(.*) /webapi/_______________________________________________________entry.cgi?api=SYNO.FileStation.VFS.GDrive&method=download&version=1&mode=download&stdhtml=true break;
+	scgi_param   REWRITE_APP "SYNO.SDS.App.FileStation3.Instance";
+	scgi_read_timeout   3600s;
+	{{> /usr/syno/share/nginx/cgi.pass}}
+}
+
+location ~ ^{{#alias}}/{{alias}}{{/alias}}/viewer/(.*)/(.*)/(.*)/(.*)$ {
+	root /usr/syno/synoman;
+	rewrite /viewer/(.*)/(.*)/(.*)/(.*) /webapi/_______________________________________________________entry.cgi?api=SYNO.FileStation.Download&version=2&method=download&dlink="$1"&_sid="$2"&SynoToken=$3&mode=open&stdhtml=true break;
+	scgi_param   REWRITE_APP "SYNO.SDS.App.FileStation3.Instance";
+	scgi_read_timeout   3600s;
+	{{> /usr/syno/share/nginx/cgi.pass}}
+}
+{{> /usr/syno/share/nginx/cgi}}

@@ -1,0 +1,87 @@
+#!/usr/bin/env python
+
+import re
+import json
+import calendar
+import datetime
+
+VERSION = 1
+
+def main ():
+	resultJSON = []
+	uniqDict = {}
+	for line in getAppArmorLines():
+		mapping = argParser(line)
+		if len(mapping) == 0:
+			continue
+		wantParams = "profile,name,denied_mask,comm,operation,requested_mask".split(",")
+		resultRow = {}
+		uniqDetectKey = ""
+		for param in wantParams:
+			if param in mapping:
+				resultRow[param] = mapping[param]
+				uniqDetectKey += mapping[param]
+		if not uniqDetectKey in uniqDict:
+			uniqDict[uniqDetectKey] = True
+			resultJSON.append(resultRow)
+
+	print json.dumps({
+		"collector_version": VERSION,
+		"denied_logs": resultJSON
+	})
+
+def getAppArmorLines ():
+	deniedLines = []
+	with open('/var/log/apparmor.log') as f:
+		allLines = reversed(f.readlines())
+
+	today = datetime.date.today()
+	monthName = calendar.month_name[today.month]
+	for line in allLines:
+		line = line.strip()
+
+		if monthName[:3] != line[:3]:
+			break
+
+		matches = re.match(r'.*(apparmor="DENIED".*)', line)
+		if not matches:
+			continue
+
+		deniedLines.append(matches.group(1))
+
+	return deniedLines
+
+
+def argParser (line):
+	state = {
+		"paringArg": True,
+		"doubleQuoted": False,
+		"valueCount": 0
+	}
+	arg = ""
+	value = ""
+	mapping = {}
+	for char in line:
+		if state["paringArg"]:
+			if char != "=":
+				arg += char
+			else:
+				state["paringArg"] = False
+				state["valueCount"] = 0
+				state["doubleQuoted"] = False
+				value = ""
+		else:
+			if state["valueCount"] == 0 and char == '"':
+				state["doubleQuoted"] = True
+				continue
+			state["valueCount"] += 1
+			if state["doubleQuoted"] and char == '"' \
+				or not state["doubleQuoted"] and char == ' ':
+					state["paringArg"] = True
+					mapping[arg.strip()] = value
+					arg = ""
+			else:
+				value += char
+	return mapping
+
+main()

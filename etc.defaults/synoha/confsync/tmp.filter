@@ -1,0 +1,8 @@
+# filter rules for directory /tmp
+# Lsyncd only support global exclude/include
+# rules that are anchored at the "root of transfer"
++ /ha/
++ /ha/ha_disk_status_ui_open
+- /ha/*
++ /.ha.conf
+- /*

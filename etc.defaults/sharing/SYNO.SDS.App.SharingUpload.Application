@@ -1,0 +1,13 @@
+{
+	"unique_mobile_page": true,
+	"protect_title": {
+		"section": "sharing",
+		"key": "file_request_title"
+	},
+	"plugins": [{
+		"name": "custom_page",
+		"params": {
+				"lib": "/usr/lib/sharing/plugin/SYNO.SDS.App.SharingUpload.Application.so"
+		}
+	}]
+}

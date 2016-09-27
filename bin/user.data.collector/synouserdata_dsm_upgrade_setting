@@ -1,0 +1,37 @@
+#!/bin/sh
+
+BIN_SED="/bin/sed"
+BIN_GREP="/bin/grep"
+BIN_SCHEDULE_TASK="/usr/syno/bin/synoschedtask"
+UPGRADE_TYPE=$(/usr/syno/bin/synogetkeyvalue /etc/synoinfo.conf upgradetype)
+AUTOUPDATE_TYPE=$(/usr/syno/bin/synogetkeyvalue /etc/synoinfo.conf dsm_autoupdate_type)
+
+ENABLE=""
+TASK_ID=$($BIN_SCHEDULE_TASK --get state=enabled | $BIN_GREP ID | $BIN_SED 's/^.*\[//g' | $BIN_SED 's/\].*$//g')
+for x in $TASK_ID
+do
+	RESULT=$($BIN_SCHEDULE_TASK --get id=$x)
+	IS_AUTOUPDATE=$(echo $RESULT | $BIN_GREP "DSM\ Auto\ Update")
+	if [ $? -eq 0 ]; then
+		ENABLE="yes"
+	fi
+done
+
+echo -n "{\"collector_version\":2,"
+	if [ "x" = "x${UPGRADE_TYPE}" ]; then
+		echo -n "\"upgradetype\":\"unknown\","
+	else
+		echo -n "\"upgradetype\":\"${UPGRADE_TYPE}\","
+	fi
+	if [ "x" = "x${AUTOUPDATE_TYPE}" ]; then
+		echo -n "\"dsm_autoupdate_type\":\"unknown\","
+	else
+		echo -n "\"dsm_autoupdate_type\":\"${AUTOUPDATE_TYPE}\","
+	fi
+
+	if [ "x" = "x${ENABLE}" ]; then
+		echo -n "\"dsm_autoupdate_enable\":false"
+	else
+		echo -n "\"dsm_autoupdate_enable\":true"
+	fi
+echo -n "}"

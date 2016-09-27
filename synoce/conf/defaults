@@ -1,0 +1,86 @@
+{
+	"type": {
+		"photo": [
+			"jpg", "jpeg", "jpe", "bmp", "png", "gif", "ico", "tif", "tiff", "psd", "ufo", "arw", "srf", "sr2", "dcr", "k25", "kdc", "cr2", "crw", "nef", "mrw", "ptx", "pef", "raf", "3fr", "erf", "mef", "mos", "orf", "rw2", "dng", "x3f", "raw"
+		],
+		"video": [
+			"mpg", "mpeg", "avi", "asf", "wmv", "mov", "flv", "f4v", "dat", "rm", "rmvb", "mp4", "divx", "xvid", "vob", "mkv", "ts", "m2ts", "m2t", "mts", "m4v", "3gp", "3g2", "qt", "swf", "dvr-ms", "vdr", "iso", "ifo", "trp", "tp"
+		],
+		"audio": [
+			"mp3", "mp1", "mp2", "mpa", "wma", "wav", "ogg", "m4a", "aac", "ac3", "ram", "ra", "m4p", "flac", "aiff", "aif", "pcm", "m4b", "ape", "dsf", "dff", "m3u", "wpl", "pls", "cue"
+		],
+		"document": [
+			"", "7", "abap", "as", "ada", "s", "ahk", "bat", "c", "cpp", "clj", "edn", "cbl", "coffee", "cfm", "cs", "css", "d", "dart", "diff", "ejs", "erl", "f", "fth", "forth", "ftl", "glsl", "go", "groovy", "haml", "handlebars", "hs", "hx", "ht3", "htm", "html", "htmls", "ini", "jack", "jade", "java", "js", "json", "jsp", "jsx", "jl", "latex", "less", "liquid", "lisp", "ls", "lsl", "lua", "mk", "markdown", "m", "mysql", "nix", "ocaml", "pascal", "perl", "php", "txt", "pl", "py", "r", "rhtml", "rb", "rbw", "rs", "sass", "scad", "scala", "scm", "ss", "scss", "sh", "sjs", "sql", "styl", "svg", "tcl", "tex", "textile", "vb", "v", "vhdl", "xml", "xq", "xqy", "xquery", "yml", "yaml", "!!!", "$00", "$01", "$02", "$04", "$05", "$o1", "$ol", "1", "12da", "1st", "82t", "92t", "abl", "ac", "adiumhtmllog", "adiumlog", "adl", "adt", "adw", "aiml", "alx", "aml", "android", "annot", "ans", "ansi", "application", "aprj", "apx", "aqt", "arff", "artask", "asc", "ascii", "asl", "asp", "ass", "assoc", "atc", "att", "awa", "awb", "awd", "awh", "awp", "axt", "ba1", "bad", "bas", "bbs", "bbxt", "bcr", "bdp", "bdr", "bea", "bel", "bep", "big", "big5", "bk", "blm", "bln", "blw", "bmtp", "bna", "bnx", "bog", "box", "bpdx", "brf", "bsdl", "bss", "bt", "bzw", "cag", "cas", "cascii", "cc", "cd2", "charset", "cho", "chord", "cif", "cil", "ckn", "clg", "cli", "clix", "cmd", "cmtx", "cof", "conf", "coo", "crash", "crd", "csassembly", "csmanifest", "csv", "ctd", "ctf", "ctl", "ctx", "dcd", "dce", "ddd", "ddt", "de", "dectest", "des", "desc", "dfe", "dfm", "dii", "diskdefines", "diz", "dk", "dkz", "dmr", "dne", "dok", "dp", "dpv", "dqy", "drp", "dsc", "dsml", "dtd", "dwl", "ecsv", "edml", "edt", "efm", "eia", "emulecollection", "en", "enc", "enf", "eng", "err", "es", "esw", "etf", "etx", "euc", "ext", "extra", "faq", "fff", "ffp", "fin", "first", "flr", "fmr", "fnx", "fon", "fr", "fra", "frm", "fsa", "full", "gbf", "gdt", "gen", "ger", "gnu", "gpl", "gs", "gthr", "gtx", "guide", "hdr", "hhc", "hhs", "hlm", "hlx", "hp8", "hsk", "htx", "hvc", "hwl", "hz", "id31", "id32", "idc", "idt", "idx", "iem", "igv", "igy", "iif", "ill", "inc", "inuse", "ion", "ipr", "iqy", "isr", "it", "ivp", "ja", "jad", "jam", "jeb", "jis", "jp1", "jss", "jtx", "kahl", "kar", "kch", "kix", "klg", "kor", "la", "label", "las", "lay", "lin", "linux", "linx", "lnc", "log", "lo_", "lrc", "lst", "ltr", "ltt", "ltx", "lue", "luf", "lwd", "lxfml", "lyr", "lyt", "man", "manifest", "map", "mar", "mathml", "maxfr", "mcw", "md", "mdl", "mdle", "mdown", "mdtext", "mdtxt", "mdwn", "me", "mez", "mf", "mib", "mit", "mkd", "mkdn", "mno", "mnu", "modd", "mpsub", "mss", "mtx", "mtxt", "mvg", "mw", "nbr", "nclk", "ncm", "new", "nfo", "nlc", "nmbd", "nokogiri", "not", "notes", "now", "npdt", "nt", "nwctxt", "ocr", "oh", "ojp", "omn", "oogl", "oot", "opc", "openbsd", "opml", "ort", "osi", "p3x", "panic", "pbd", "pc5", "pcl", "pd", "pdu", "pfs", "pgw", "pjs", "pla", "plf", "plg", "plist", "plk", "pln", "pml", "pmo", "pod", "prc", "prn", "pro", "prr", "ps", "psb", "psi2", "pt3", "pts", "pvj", "pvw", "q&a", "qdt", "qud", "rbdf", "rdf", "rea", "readme", "reg", "rel", "rep", "resp", "rest", "rff", "ris", "rml", "rqy", "rst", "rt", "rtl", "rtx", "ru", "rus", "rzk", "rzn", "s19", "s2k", "sami", "sbv", "sct", "sdnf", "sen", "seq", "set", "sfb", "sgp", "sha1", "sha512", "skcard", "skv", "sls", "smali", "smf", "smi", "sms", "snw", "soap", "soundscript", "spa", "spec", "spg", "spn", "spx", "srt", "srx", "ssa", "ssf", "st1", "stf", "stq", "strings", "sub", "syn", "t", "t2t", "tab", "tbd", "tbl", "tbx", "tce", "tcm", "tdf", "ted", "text", "textclipping", "tfw", "tgf", "thml", "thp", "tlb", "tle", "tlx", "tm", "tml", "tmprtf", "tmx", "tnef", "tph", "tpl", "trn", "trt", "tsv", "tt", "ttbl", "tte", "ttf", "ttpl", "ttxt", "tx8", "tx?", "txa", "txd", "txe", "txh", "u3i", "uax", "uhtml", "uk", "unauth", "uni", "unx", "us", "usa", "user", "usf", "usg", "utf8", "utx", "utxt", "ver", "vet", "vfk", "vhd", "vis", "vkp", "vmg", "vmsg", "vna", "vsmproj", "vw", "vw3", "vxml", "wer", "wir", "wkf", "wn", "wrd", "wrl", "wsc", "wst", "wtf", "wtl", "wtx", "x20", "x60", "x70", "x80", "x90", "xb0", "xc0", "xct", "xd0", "xdl", "xdp", "xfd", "xff", "xhtm", "xlf", "xsd", "xsl", "xslt", "xsr", "xwp", "xy", "xy3", "xyp", "xyw", "xyz", "zanebug", "zed", "zhp", "zib", "zw", "zxe", "_me",
+			"xls", "xlt", "slk", "gnumeric",
+			"docx", "dotx", "docm", "dotm", "pptx", "ppsx", "potx", "pptm", "ppsm", "potm", "xlsx", "xltx", "xlsm", "xltm", "odt", "ods", "odp", "odg", "odc", "odf", "odb", "odi", "odm", "ott", "ots", "otp", "otg", "otc", "otf", "oti", "oth",
+			"pages", "key", "numbers",
+			"doc", "dot",
+			"ppt", "pps", "pot", "ppa",
+			"rtf",
+			"pdf",
+			"7z", "bz2", "gz", "zip", "tgz", "tbz", "tar",
+			"rar",
+			"epub",
+			"eml", "msg"
+		]
+	},
+	"tool": [{
+		"lib": "synoidx_parser.so",
+		"preload": true,
+		"ext": [
+			"jpg", "jpeg", "jpe", "bmp", "png", "gif", "ico", "tif", "tiff", "psd", "ufo", "arw", "srf", "sr2", "dcr", "k25", "kdc", "cr2", "crw", "nef", "mrw", "ptx", "pef", "raf", "3fr", "erf", "mef", "mos", "orf", "rw2", "dng", "x3f", "raw",
+			"mpg", "mpeg", "avi", "asf", "wmv", "mov", "flv", "f4v", "dat", "rm", "rmvb", "mp4", "divx", "xvid", "vob", "mkv", "ts", "m2ts", "m2t", "mts", "m4v", "3gp", "3g2", "qt", "swf", "dvr-ms", "vdr", "iso", "ifo", "trp", "tp",
+			"mp3", "mp1", "mp2", "mpa", "wma", "wav", "ogg", "m4a", "aac", "ac3", "ram", "ra",  "m4p", "flac", "aiff", "aif", "pcm", "m4b", "ape", "dsf", "dff", "m3u", "wpl", "pls", "cue"
+		]
+	}, {
+		"lib": "plain_text.so",
+		"preload": true,
+		"ext": ["", "7", "abap", "as", "ada", "s", "ahk", "bat", "c", "cpp", "clj", "edn", "cbl", "coffee", "cfm", "cs", "css", "d", "dart", "diff", "ejs", "erl", "f", "fth", "forth", "ftl", "glsl", "go", "groovy", "haml", "handlebars", "hs", "hx", "ht3", "htm", "html", "htmls", "ini", "jack", "jade", "java", "js", "json", "jsp", "jsx", "jl", "latex", "less", "liquid", "lisp", "ls", "lsl", "lua", "mk", "markdown", "m", "mysql", "nix", "ocaml", "pascal", "perl", "php", "txt", "pl", "py", "r", "rhtml", "rb", "rbw", "rs", "sass", "scad", "scala", "scm", "ss", "scss", "sh", "sjs", "sql", "styl", "svg", "tcl", "tex", "textile", "vb", "v", "vhdl", "xml", "xq", "xqy", "xquery", "yml", "yaml", "!!!", "$00", "$01", "$02", "$04", "$05", "$o1", "$ol", "1", "12da", "1st", "82t", "92t", "abl", "ac", "adiumhtmllog", "adiumlog", "adl", "adt", "adw", "aiml", "alx", "aml", "android", "annot", "ans", "ansi", "application", "aprj", "apx", "aqt", "arff", "artask", "asc", "ascii", "asl", "asp", "ass", "assoc", "atc", "att", "awa", "awb", "awd", "awh", "awp", "axt", "ba1", "bad", "bas", "bbs", "bbxt", "bcr", "bdp", "bdr", "bea", "bel", "bep", "big", "big5", "bk", "blm", "bln", "blw", "bmtp", "bna", "bnx", "bog", "box", "bpdx", "brf", "bsdl", "bss", "bt", "bzw", "cag", "cas", "cascii", "cc", "cd2", "charset", "cho", "chord", "cif", "cil", "ckn", "clg", "cli", "clix", "cmd", "cmtx", "cof", "conf", "coo", "crash", "crd", "csassembly", "csmanifest", "csv", "ctd", "ctf", "ctl", "ctx", "dcd", "dce", "ddd", "ddt", "de", "dectest", "des", "desc", "dfe", "dfm", "dii", "diskdefines", "diz", "dk", "dkz", "dmr", "dne", "dok", "dp", "dpv", "dqy", "drp", "dsc", "dsml", "dtd", "dwl", "ecsv", "edml", "edt", "efm", "eia", "emulecollection", "en", "enc", "enf", "eng", "err", "es", "esw", "etf", "etx", "euc", "ext", "extra", "faq", "fff", "ffp", "fin", "first", "flr", "fmr", "fnx", "fon", "fr", "fra", "frm", "fsa", "full", "gbf", "gdt", "gen", "ger", "gnu", "gpl", "gs", "gthr", "gtx", "guide", "hdr", "hhc", "hhs", "hlm", "hlx", "hp8", "hsk", "htx", "hvc", "hwl", "hz", "id31", "id32", "idc", "idt", "idx", "iem", "igv", "igy", "iif", "ill", "inc", "inuse", "ion", "ipr", "iqy", "isr", "it", "ivp", "ja", "jad", "jam", "jeb", "jis", "jp1", "jss", "jtx", "kahl", "kar", "kch", "kix", "klg", "kor", "la", "label", "las", "lay", "lin", "linux", "linx", "lnc", "log", "lo_", "lrc", "lst", "ltr", "ltt", "ltx", "lue", "luf", "lwd", "lxfml", "lyr", "lyt", "man", "manifest", "map", "mar", "mathml", "maxfr", "mcw", "md", "mdl", "mdle", "mdown", "mdtext", "mdtxt", "mdwn", "me", "mez", "mf", "mib", "mit", "mkd", "mkdn", "mno", "mnu", "modd", "mpsub", "mss", "mtx", "mtxt", "mvg", "mw", "nbr", "nclk", "ncm", "new", "nfo", "nlc", "nmbd", "nokogiri", "not", "notes", "now", "npdt", "nt", "nwctxt", "ocr", "oh", "ojp", "omn", "oogl", "oot", "opc", "openbsd", "opml", "ort", "osi", "p3x", "panic", "pbd", "pc5", "pcl", "pd", "pdu", "pfs", "pgw", "pjs", "pla", "plf", "plg", "plist", "plk", "pln", "pml", "pmo", "pod", "prc", "prn", "pro", "prr", "ps", "psb", "psi2", "pt3", "pts", "pvj", "pvw", "q&a", "qdt", "qud", "rbdf", "rdf", "rea", "readme", "reg", "rel", "rep", "resp", "rest", "rff", "ris", "rml", "rqy", "rst", "rt", "rtl", "rtx", "ru", "rus", "rzk", "rzn", "s19", "s2k", "sami", "sbv", "sct", "sdnf", "sen", "seq", "set", "sfb", "sgp", "sha1", "sha512", "skcard", "skv", "sls", "smali", "smf", "smi", "sms", "snw", "soap", "soundscript", "spa", "spec", "spg", "spn", "spx", "srt", "srx", "ssa", "ssf", "st1", "stf", "stq", "strings", "sub", "syn", "t", "t2t", "tab", "tbd", "tbl", "tbx", "tce", "tcm", "tdf", "ted", "text", "textclipping", "tfw", "tgf", "thml", "thp", "tlb", "tle", "tlx", "tm", "tml", "tmprtf", "tmx", "tnef", "tph", "tpl", "trn", "trt", "tsv", "tt", "ttbl", "tte", "ttf", "ttpl", "ttxt", "tx8", "tx?", "txa", "txd", "txe", "txh", "u3i", "uax", "uhtml", "uk", "unauth", "uni", "unx", "us", "usa", "user", "usf", "usg", "utf8", "utx", "utxt", "ver", "vet", "vfk", "vhd", "vis", "vkp", "vmg", "vmsg", "vna", "vsmproj", "vw", "vw3", "vxml", "wer", "wir", "wkf", "wn", "wrd", "wrl", "wsc", "wst", "wtf", "wtl", "wtx", "x20", "x60", "x70", "x80", "x90", "xb0", "xc0", "xct", "xd0", "xdl", "xdp", "xfd", "xff", "xhtm", "xlf", "xsd", "xsl", "xslt", "xsr", "xwp", "xy", "xy3", "xyp", "xyw", "xyz", "zanebug", "zed", "zhp", "zib", "zw", "zxe", "_me"]
+	}, {
+		"lib": "phpoffice.so",
+		"preload": false,
+		"ext": ["xls", "xlt", "slk", "gnumeric"]
+	}, {
+		"lib": "office_doc_xml.so",
+		"preload": true,
+		"ext": [
+			"docx", "dotx", "docm", "dotm", "pptx", "ppsx", "potx", "pptm", "ppsm", "potm", "xlsx", "xltx", "xlsm", "xltm", "odt", "ods", "odp", "odg", "odc", "odf", "odb", "odi", "odm", "ott", "ots", "otp", "otg", "otc", "otf", "oti", "oth"
+		]
+	}, {
+		"lib": "iwork.so",
+		"preload": false,
+		"ext": ["pages", "key", "numbers"]
+	}, {
+		"lib": "antiword.so",
+		"preload": false,
+		"ext": ["doc", "dot"]
+	}, {
+		"lib": "catppt.so",
+		"preload": false,
+		"ext": ["ppt", "pps", "pot", "ppa"]
+	}, {
+		"lib": "rtf.so",
+		"preload": false,
+		"ext": ["rtf"]
+	}, {
+		"lib": "pdf.so",
+		"preload": true,
+		"ext": ["pdf"]
+	}, {
+		"lib": "p7zip.so",
+		"preload": false,
+		"ext": ["7z", "bz2", "gz", "zip", "tgz", "tbz", "tar"]
+	}, {
+		"lib": "unrar.so",
+		"preload": false,
+		"ext": ["rar"]
+	}, {
+		"lib": "epub.so",
+		"preload": false,
+		"ext": ["epub"]
+	}, {
+		"lib": "email.so",
+		"preload": false,
+		"ext": ["eml", "msg"]
+	}]
+}

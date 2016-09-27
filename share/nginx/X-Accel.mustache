@@ -1,0 +1,8 @@
+location ~ ^/volume(?:X|USB|SATA|Gluster)?\d+/ {
+    internal;
+
+    root /;
+
+    include app.d/x-accel.*.conf;
+    include conf.d/x-accel.*.conf;
+}

@@ -1,0 +1,30 @@
+{
+   "IvbmmP" : {
+      "desc" : "",
+      "services" : [
+         {
+            "display_name" : "Snapshot Replication",
+            "display_name_i18n" : "snapmgr:share_snapshot_replication",
+            "isPkg" : false,
+            "owner" : "root",
+            "service" : "snapshot_receiver",
+            "subscriber" : "btrfsreplica"
+         },
+         {
+            "display_name" : "FTPS",
+            "isPkg" : false,
+            "owner" : "root",
+            "service" : "ftpd",
+            "subscriber" : "smbftpd"
+         },
+         {
+            "display_name" : "Default",
+            "display_name_i18n" : "common:default",
+            "isPkg" : false,
+            "owner" : "root",
+            "service" : "default",
+            "subscriber" : "system"
+         }
+      ]
+   }
+}

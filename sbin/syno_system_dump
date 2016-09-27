@@ -1,0 +1,90 @@
+#!/bin/bash
+system_dump_script=syno_system_dump
+log_file=/var/log/syno_sys_status.log
+
+get_gateway()
+{
+        #    route -n |
+        while IFS=$'\n' read line
+        do
+                echo $line | awk '{print $4}' |grep G > /dev/null
+                if [ 0 -eq $? ]; then
+                        gateway=`echo $line | awk '{print $2}'`
+                        break
+                fi
+        done < <(route -n)
+}
+
+run_dump()
+{
+        echo [date] `date` >> $log_file
+        echo [ps result] >> $log_file
+        ps auxf >> $log_file
+        echo >> $log_file
+
+        echo [vmstat result] >> $log_file
+        cat /proc/vmstat >> $log_file
+        echo >> $log_file
+
+        echo [interrupts result] >> $log_file
+        cat /proc/interrupts >> $log_file
+        echo >> $log_file
+
+        echo [slabinfo result] >> $log_file
+        cat /proc/slabinfo >> $log_file
+        echo >> $log_file
+
+        echo [memoryinfo result] >> $log_file
+        cat /proc/meminfo >> $log_file
+        echo >> $log_file
+
+        echo [zoneinfo result] >> $log_file
+        cat /proc/zoneinfo >> $log_file
+        echo >> $log_file
+
+        echo [df result] >> $log_file
+        df >> $log_file
+        echo >> $log_file
+
+        echo [lslocks result] >> $log_file
+        /sbin/lslocks >> $log_file
+        echo >> $log_file
+
+        echo [top result] >> $log_file
+        /usr/bin/top -b -n 2 -w 1024 >> $log_file
+        echo >> $log_file
+
+        echo [route result] >> $log_file
+        route -n >> $log_file
+        echo >> $log_file
+
+        echo [ping gateway] >> $log_file
+        get_gateway
+        if [ ! -z $gateway ]; then
+                ping -c 3 $gateway >> $log_file
+                echo >> $log_file
+        fi
+
+        echo >> $log_file
+        echo >> $log_file
+}
+
+add_crontab()
+{
+        echo */3$'\t'*$'\t'*$'\t'*$'\t'*$'\t'root$'\t'/usr/syno/sbin/$system_dump_script >> /etc/crontab
+        synoservice --reload crond
+}
+
+remove_crontab()
+{
+        sed -i /$system_dump_script/d /etc/crontab
+        synoservice --reload crond
+}
+
+if [ "$1" == "enable" ]; then
+        add_crontab
+elif [ "$1" == "disable" ]; then
+        remove_crontab
+else
+        run_dump
+fi

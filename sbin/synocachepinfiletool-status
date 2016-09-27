@@ -1,0 +1,20 @@
+#!/bin/sh
+service=synocachepinfiletool
+
+if dmsetup table | grep -q "support pin file(1)" ; then
+	# Service should start
+	if status $service | grep -q "running" ; then
+		echo "Check service start: OK"
+		exit 0
+	else
+		exit 1
+	fi
+else
+	# Service no need to start
+	if status $service | grep -q "stop" ; then
+		echo "Check service stop: OK"
+		exit 0
+	else
+		exit 1
+	fi
+fi

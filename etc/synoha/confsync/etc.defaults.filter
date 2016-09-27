@@ -1,0 +1,5 @@
+# filter rules for directory /etc
+# Lsyncd only support global exclude/include
+# rules that are anchored at the "root of transfer"
++ /support_ssd.db
+- /*

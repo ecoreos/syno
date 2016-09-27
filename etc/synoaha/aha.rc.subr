@@ -1,0 +1,25 @@
+#!/bin/sh
+
+TOUCH="/bin/touch"
+MKDIR="/usr/bin/mkdir"
+
+AHA_TMP_DIR="/tmp/aha"
+ISCSI_READY_FALG="$AHA_TMP_DIR/.syno.iscsi.ready"
+
+SetISCSIReady() {
+	SupportDualhead=`/bin/get_key_value /etc.defaults/synoinfo.conf support_dual_head`
+	if [ ! -d "$AHA_TMP_DIR" ]; then
+		$MKDIR -p $AHA_TMP_DIR
+	fi
+	if [ "xyes" = "x$SupportDualhead" ]; then
+		$TOUCH $ISCSI_READY_FALG
+	fi
+}
+
+CheckIfISCSIReady() {
+	if [ -f "$ISCSI_READY_FALG" ]; then
+		return 0;
+	fi
+	return 1;
+}
+

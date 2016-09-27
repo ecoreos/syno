@@ -1,0 +1,1122 @@
+# Copyright (c) 2000-2012 Synology Inc. All rights reserved.
+
+HA_PREFIX="/usr/syno/synoha"
+prefix=$HA_PREFIX
+. $HA_PREFIX/etc.defaults/serv_conf_def.sh
+. /etc.defaults/rc.subr
+. $HA_PREFIX/etc.defaults/rc.define
+SYNOHA_BIN="$HA_PREFIX/sbin/synoha"
+SYNONET_BIN="/usr/syno/sbin/synonet"
+SYNONETDTOOL="/usr/syno/sbin/synonetdtool"
+SYNO_PKG_BIN="/usr/syno/bin/synopkg"
+SYNO_PKGCTL_BIN="/usr/syno/sbin/synopkgctl"
+SYNO_BOOT_BIN="/usr/syno/bin/synobootseq"
+SYNOHA_SXXPRE="$HA_PREFIX/etc.defaults/SxxPre.sh"
+SYNOHA_SXXPOST="$HA_PREFIX/etc.defaults/SxxPost.sh"
+SYNO_HA_STOPPED="/tmp/.ha.stopped"
+SYNO_HA_STOPPING="/tmp/.ha.stopping"
+SYNO_HA_STATUS_CHECK_LOG="/tmp/ha/status_check.log"
+SYNO_DO_NOT_RESTART_SERVICES="/tmp/do_not_restart_services"
+SYNO_HA_AUTH_KEY_SH="$HA_PREFIX/etc.defaults/UtilAuthKey.sh"
+SYNO_HA_AUTH_KEY="/tmp/ha/.ha_auth_key"
+
+SYNOHA_MON_MD0="synohamonmd0"
+SYNOHA_REC_SYS="synoharecordd"
+SYNOHA_CHK_STATE_SER="synohachkstateserverd"
+SYNOHA_CHK_STATE_CLI="synohachkstateclientd"
+SYNOLOGSET1_BIN="/usr/syno/bin/synologset1"
+CACHE_PIN_TOOL_HA="/usr/syno/sbin/synocachepinfiletoolha"
+
+SERV_FILE_MON=$HA_SERV_MON
+SERV_FILE_MUST=$HA_SERV_MUST
+
+SERV_GROUP_BUILTIN=$HA_SERV_BUILTIN
+SERV_GROUP_PACKAGE=$HA_SERV_PACKAGE
+
+SYNOINFO="/etc/synoinfo.conf"
+HA_INFO=$HA_PREFIX/etc/ha.conf
+HA_TMP_INFO=/tmp/.ha.conf
+SYNOETCHOSTS="/etc/hosts"
+SYNOETCHOSTSTMP="$SYNOETCHOSTS.tmp"
+
+# Backup files for SHA safemode
+HA_SB_DESKTOP_SETTING=$HA_SAFEMODE_DIR"dsm_usersettings.tgz"
+HA_SB_SYNOSERVICE_SETTING=$HA_SAFEMODE_DIR"synoservice_override.tgz"
+
+SYNOSERVICECFG_BIN="/usr/syno/sbin/synoservice"
+SERV_TYPE_NONE=0
+SERV_TYPE_SYNO_SERVICE=2
+SERV_TYPE_SYNO_PKG=3
+
+# MUST! Change synoha/ha.h at the same time!
+MAX_HA_SERV_START_FAST_SEC=1200
+MAX_HA_SERV_STOP_SEC=600
+MAX_HA_PASSIVE_ONLY=1800
+
+HA_IF_MAIN=`get_key_value $HA_INFO ha_if_main`
+HA_IF_MAIN_IDX=`echo $HA_IF_MAIN | sed 's/[_a-zA-Z]*//' | cut -d'.' -f1`
+if echo $HA_IF_MAIN | grep -q "bond" ; then
+	HA_IP_MAIN=`get_key_value $HA_INFO ha_bond_ip$HA_IF_MAIN_IDX`
+else
+	HA_IP_MAIN=`get_key_value $HA_INFO ha_ip$HA_IF_MAIN_IDX`
+fi
+DRBD_IF=`get_key_value $HA_INFO drbd_if`
+DRBD_IP0=`get_key_value $HA_INFO drbd_ip0`
+DRBD_IP1=`get_key_value $HA_INFO drbd_ip1`
+DRBD_NETMASK=`get_key_value $HA_INFO drbd_netmask`
+NODE_IP0=`get_key_value $HA_INFO ip0`
+NODE_IP1=`get_key_value $HA_INFO ip1`
+NODE_HOST0=`get_key_value $HA_INFO host0`
+NODE_HOST1=`get_key_value $HA_INFO host1`
+SYNO_HA_ORIGINAL_HOSTNAME_FILE=$CRM_HOSTNAME_ORIGINAL
+LOCAL_HOST=
+if [ -s "$SYNO_HA_ORIGINAL_HOSTNAME_FILE" ]; then
+  LOCAL_HOST=`cat $SYNO_HA_ORIGINAL_HOSTNAME_FILE`
+else
+  LOCAL_HOST=`uname -n`
+fi
+REMOTE_HOST=
+DRBD_IP_LOCAL=
+DRBD_IP_REMOTE=
+if [ "x$LOCAL_HOST" == "x$NODE_HOST0" ]; then
+	REMOTE_HOST=$NODE_HOST1
+	DRBD_IP_LOCAL=$DRBD_IP0
+	DRBD_IP_REMOTE=$DRBD_IP1
+else
+	REMOTE_HOST=$NODE_HOST0
+	DRBD_IP_LOCAL=$DRBD_IP1
+	DRBD_IP_REMOTE=$DRBD_IP0
+fi
+HA_HOSTNAME=`get_key_value $HA_INFO ha_hostname`
+
+OCF_RESKEY_drbdconf_default="$prefix/etc.defaults/drbd.conf"
+OCF_RESKEY_arp_count=60
+IPADDR2_OCF_STARTED="/tmp/ha/.ipaddr2_ocf.started"
+
+FLAG_DRBD_DISCARD_MYDATA=$DRBD_DISCARD_MYDATA
+SZ_HA_NODE_ONLINE="NODE__ON"
+
+SYNO_HA_UPG=$HA_UPGRADE_INFO
+SYNO_HA_SAFEMODE=$HA_SAFEMODE_INFO
+SYNO_HA_PING=$HA_PING_SERVER
+
+SYNO_HA_MESG_REQ_AIS_HEADER="MESG REQ"
+SYNO_HA_MESG_RES_AIS_HEADER="MESG RES"
+SYNO_HA_DEBUG_DAT="/tmp/ha.debug.dat"
+SYNO_HA_LAST_DEBUG_DAT="/var/log/ha.last.debug.dat"
+SYNO_HA_DEBUG_DAT_DONE="/tmp/ha.debug.dat.done"
+SYNO_HA_AIS_POWEROFF=$AIS_POWEROFF
+SYNO_HA_STATUS_ONLINE=$STATUS_ONLINE
+SYNO_HA_STATUS_WARNING_ONLINE=$STATUS_WARNING_ONLINE
+SYNO_HA_STATUS_OFFLINE=$STATUS_OFFLINE
+SYNO_HA_STATUS_WARNING_OFFLINE=$STATUS_WARNING_OFFLINE
+SZF_HA_IN_UPS_SAFEMODE="/var/lib/ha/ha_in_ups_safemode"
+
+RSYNC_PROG="/usr/bin/rsync"
+HA_RSYNC_OPTION="--daemon --config=$prefix/etc.defaults/confsync/rsyncd.conf"
+RSYNC_PID="$prefix/var/run/ha/rsyncd.pid"
+RSYNC_PORT="874"
+RSYNC_PW_FILE="$prefix/etc/confsync/rsync.pw"
+
+HA_SERV_FAIL_PREFIX=$SERV_FAIL_FILE
+DRBDADM="/usr/bin/drbdadm -c $HA_PREFIX/etc.defaults/drbd.conf"
+DRBDSETUP="/usr/bin/drbdsetup"
+FLAG_HA_SXX_ROLE_PREACTIVE=$SXX_ROLE_PREACTIVE
+FLAG_HA_SXX_ROLE_PREPASSIVE=$SXX_ROLE_PREPASSIVE
+FLAG_HA_REMOTE_IS_FENCED="/tmp/.ha.remote.is.fenced"
+FLAG_HA_HAS_BUMPED_UP_ADMIN_EPOCH=$HAS_BUMPED_UP_ADMIN_EPOCH
+FLAG_HA_TOO_ACTIVE_BOTH_ACTIVE="/tmp/ha/.too_active_both_active"
+
+RUN_LEVEL_2_SERVICES="crond synorelayd synovpnclient"
+
+pause_level_2_services()
+{
+    for serv in $RUN_LEVEL_2_SERVICES; do
+        $SYNOSERVICECFG_BIN --pause-by-reason $serv ha-passive-level-2
+    done
+}
+
+resume_level_2_services()
+{
+    for serv in $RUN_LEVEL_2_SERVICES; do
+        $SYNOSERVICECFG_BIN --resume-by-reason $serv ha-passive-level-2
+    done
+}
+
+# Add a key/value string in a section/group
+# ex. AddKeyInGroup "/usr/syno/etc/smb.conf" "[global]" "test=1"
+# $1: full file path name
+# $2: group name
+# $3: key/value string
+AddKeyInGroup()
+{
+	if [ $# != 3 ]; then
+		return 1
+	fi
+
+	file=$1
+	tmpfile=$file.$$
+	group=$2
+	key=$3
+	add="0"
+	rm -fr $tmpfile
+
+	while read line ; do
+		echo $line >> $tmpfile
+		if [ "$add" = "0" -a "x$line" = "x$group" ]; then
+			add="1"
+			echo $key >> $tmpfile
+		fi
+	done < $file
+
+	# if not found, add new group
+	if [ "$add" = "0" ]; then
+		echo $group >> $tmpfile
+		echo $key >> $tmpfile
+	fi
+
+	if [ -s $tmpfile ]; then
+		mv $tmpfile $file
+	fi
+	return 0
+}
+
+check_daemon_alive()
+{
+	if ! check_alive $SYNOHA_MON_MD0; then
+		$SYNOHA_MON_MD0 & > /dev/null
+	fi
+
+	if ! check_alive $SYNOHA_REC_SYS; then
+		$SYNOHA_REC_SYS & > /dev/null
+	fi
+}
+
+check_active_daemon_alive()
+{
+	if ! check_alive $SYNOHA_CHK_STATE_SER; then
+		$SYNOHA_CHK_STATE_SER $DRBD_IP_LOCAL & > /dev/null
+	fi
+}
+
+check_passive_daemon_alive()
+{
+	if ! check_alive $SYNOHA_CHK_STATE_CLI; then
+		$SYNOHA_CHK_STATE_CLI $DRBD_IP_REMOTE & > /dev/null
+	fi
+}
+
+check_alive()
+{
+	/bin/pidof $1 &> /dev/null
+}
+
+#
+# check_alive_id pid [exe name]
+check_alive_id()
+{
+	local pid=${1:-}
+	local procname=${2:-}
+
+	[ -z "$pid" ] && return 1
+
+	if [ ! -e "/proc/${pid}/exe" ]; then
+		return 1
+	fi
+
+	if [ -z "$procname" ]; then
+		return 0
+	fi
+
+	local exe=`readlink "/proc/${pid}/exe"`
+	if [ -z "$exe" ]; then
+		return 0
+	elif [ $(basename $exe) == "$procname" ]; then
+		return 0
+	else
+		return 1
+	fi
+}
+
+# Wait for specified action become true.
+#
+# $1: action, which should return immediately
+# $2: timeout
+wait_for()
+{
+	local _count=0
+	local _action="${1:-true}"
+	local _timeout="${2:-5}"
+
+	while [ $_count -lt $_timeout ]; do
+		if eval $_action; then
+			return 0
+		fi
+
+		sleep 1
+		_count=$((_count + 1))
+	done
+
+	return 1
+}
+
+# Kill process
+#
+# $1: process name
+kill_proc()
+{
+	[ -z "${1:-}" ] && return 1
+
+	/usr/bin/killall -s TERM $1 &> /dev/null
+
+	wait_for "! check_alive $1" 30
+
+	if check_alive $1; then
+		/usr/bin/killall -s KILL $1 &> /dev/null
+	fi
+
+	wait_for "! check_alive $1" 30
+}
+
+# Kill process by pid
+#
+# $1: process id
+# $2: exe name (optional)
+kill_proc_id()
+{
+	local pid=${1:-}
+	local procname=${2:-}
+
+	[ -z "$pid" ] && return 1
+
+	if [ -n "$procname" -a -e "/proc/${pid}/exe" ]; then
+		local exe=`readlink "/proc/${pid}/exe"`
+		if [ -n "$exe" ]; then
+			if [ $(basename $exe) != "$procname" ]; then
+				return 1
+			fi
+		fi
+	fi
+
+	/bin/kill -s TERM $pid &> /dev/null
+
+	wait_for "! check_alive_id $pid" 10
+
+	if check_alive_id $pid; then
+		/bin/kill -s KILL $pid &> /dev/null
+	fi
+
+	wait_for "! check_alive_id $pid" 10
+}
+
+PinCache()
+{
+	synoha_log notice "Reloading cached files"
+	if ! $CACHE_PIN_TOOL_HA --reload-blocks; then
+		synoha_log "Failed to reload cached files"
+	else
+		synoha_log notice "Reload cached files successfully"
+	fi
+}
+
+UnpinCache()
+{
+	synoha_log notice "Unpinning cached files"
+	if ! $CACHE_PIN_TOOL_HA --unpin-all; then
+		synoha_log "Failed to unpin cached files"
+	else
+		synoha_log notice "Unpin cached files successfully"
+	fi
+}
+
+# $1: SERV_TYPE_MUST, $$SERV_TYPE_START, $SERV_TYPE_BASE, $SERV_TYPE_3RD, $SERV_TYPE_DONE
+# must in order $SERV_TYPE_MUST -> $SERV_TYPE_START -> $SERV_TYPE_BASE -> $SERV_TYPE_3RD -> $SERV_TYPE_DONE
+StartServicesHA()
+{
+	if [ $# != 1 ]; then
+		return $LSB_ERR_GENERIC
+	fi
+
+	local _file=
+	local _srv=
+
+	case "$1" in
+		$SERV_TYPE_START)
+			synoha_log notice "serv_start..."
+			$SYNO_BOOT_BIN --set-start-services >/dev/null 2>&1
+			return $LSB_SUCCESS
+			;;
+		$SERV_TYPE_3RD)
+			synoha_log notice "serv_3rd..."
+
+			# Keep the following order
+			$SYNO_PKGCTL_BIN correct-cfg
+			/sbin/start synopkgctl-launcher
+			/sbin/start 3rdparty-services
+
+			return $LSB_SUCCESS
+			;;
+		$SERV_TYPE_DONE)
+			# skip set bootseq done when upgrade is not yet finished
+			if [ -f "$SYNO_HA_UPG" ]; then
+				return $LSB_SUCCESS
+			fi
+			synoha_log notice "serv_done..."
+			# Stop to set auth key continues since SxxPre start
+			$SYNO_HA_AUTH_KEY_SH stop
+			# set boot sequence done also send service ready signal to scemd
+			/sbin/start rc-sysinit
+
+			if ! synoha --local-role | grep -q $ROLE_PASSIVE; then
+				resume_level_2_services
+			fi
+			return $LSB_SUCCESS
+			;;
+		$SERV_TYPE_MUST)
+			synoha_log notice "serv_must ..."
+			return $LSB_SUCCESS
+			;;
+		$SERV_TYPE_BASE)
+			synoha_log notice "serv_base ..."
+			$SYNOHA_SXXPRE start
+
+			# Refer to upstart-1.x/synoconf/dsm-services.conf
+			/usr/syno/etc/rc.sysv/serv-bootup-timeout.sh start;
+
+			UnpinCache
+			PinCache
+
+			$SYNOHA_SXXPOST start
+			return $LSB_SUCCESS
+			;;
+		*)
+			return $LSB_ERR_GENERIC
+			;;
+	esac
+}
+
+StopServiceHA()
+{
+	local _file=
+	local _srv=
+
+	synoha_log notice "serv stop 3rd"
+	servicetool --3rdparty stop
+
+	$SYNOHA_SXXPOST stop
+
+	# Due to HA may run services many times(switch over), cleanup bootup-failed
+	# folder each time we checked
+	rm /run/synoservice/bootup-fail-job/*
+
+	$SYNOHA_SXXPRE stop
+
+	# Don't need to unpin cache while powering off
+	if [ ! -e $PREVIOUS_ROLE_ACTIVE ] && [ ! -e $PREVIOUS_ROLE_PASSIVE ]; then
+		UnpinCache
+	fi
+
+	return $LSB_SUCCESS
+}
+
+RestartService()
+{
+	local _type=$1
+	local _srv=$2
+
+	case "$_type" in
+		"$SERV_TYPE_SYNO_SERVICE")
+			if [ "ftpd" == "$_srv" ]; then
+				# ftpd and ftpd-ssl share same daemon ftpd, so only restart one
+				$SYNOSERVICECFG_BIN --is-enabled ftpd &>/dev/null
+				if [ $? -eq 1 ] ; then
+					# ftpd is enabled, restart ftpd anyway
+					$SYNOSERVICECFG_BIN --restart ftpd &>/dev/null
+				else
+					$SYNOSERVICECFG_BIN --restart ftpd-ssl &>/dev/null
+				fi
+			else
+				$SYNOSERVICECFG_BIN --restart "$_srv" &>/dev/null
+			fi
+			return $?
+			;;
+		"$SERV_TYPE_SYNO_PKG")
+			$SYNO_PKG_BIN stop $_srv &>/dev/null
+			$SYNO_PKG_BIN start $_srv &>/dev/null
+			return $?
+			;;
+		*)
+			return  $LSB_ERR_GENERIC
+			;;
+	esac
+}
+
+# $1: service type (SERV_TYPE_NONE|SERV_TYPE_SYSV|SERV_TYPE_SYNO_SERVICE|SERV_TYPE_SYNO_PKG)
+# $2: service name
+# $3: execute command
+GetServiceStatus()
+{
+	local _type=$1
+	local _srv=$2
+
+	case "$_type" in
+		"$SERV_TYPE_SYNO_SERVICE")
+			if [ "ftpd" == "$_srv" ]; then
+				# ftpd and ftpd-ssl share same daemon ftpd, so only check one
+				$SYNOSERVICECFG_BIN --is-enabled ftpd &>/dev/null
+				if [ $? -eq 1 ] ; then
+					# ftpd is enabled, check ftpd
+					$SYNOSERVICECFG_BIN --status ftpd &>/dev/null
+				else
+					$SYNOSERVICECFG_BIN --status ftpd-ssl &>/dev/null
+				fi
+			else
+				$SYNOSERVICECFG_BIN --status "$_srv" &>/dev/null
+			fi
+			return $?
+			;;
+		"$SERV_TYPE_SYNO_PKG")
+			$SYNO_PKG_BIN status "$_srv" &>/dev/null
+			return $?
+			;;
+		*)
+			return $LSB_STAT_UNKNOWN
+			;;
+	esac
+}
+
+# $1: service type (SERV_TYPE_NONE|SERV_TYPE_SYSV|SERV_TYPE_SYNO_SERVICE|SERV_TYPE_SYNO_PKG)
+# $2: service name
+# $3: execute command
+# $4: parameter (maybe null)
+CheckStatus()
+{
+	local _type=$1
+	local _srv=$2
+	local _ret=
+
+	GetServiceStatus "$_type" "$_srv"
+	_ret=$?
+	if [ "$LSB_STAT_RUNNING" == "$_ret" -o "$LSB_STAT_NOT_RUNNING" == "$_ret" ]; then
+		return $LSB_SUCCESS
+	fi
+	sleep 5
+	# check again if failed status is caused by other people
+	GetServiceStatus "$_type" "$_srv"
+	_ret=$?
+	if [ "$LSB_STAT_RUNNING" == "$_ret" -o "$LSB_STAT_NOT_RUNNING" == "$_ret" ]; then
+		return $LSB_SUCCESS
+	fi
+	if $SYNOHA_BIN --service-skip $SERV_TYPE_RESTART $_srv; then
+		synoha_log "Check service $_srv error."
+		return $LSB_ERR_GENERIC
+	fi
+	synoha_log "Check service $_srv error. Restart."
+	RCMsg "Restart $_srv ..."
+	RestartService "$_type" "$_srv"
+	_ret=$?
+	if [ "$LSB_SUCCESS" != "$_ret" -a "$LSB_NOT_RUNNING" != "$_ret" ]; then
+		synoha_log "Failed to restart service $_srv. (sh start, retcode=$_ret)"
+		return $_ret
+	fi
+	GetServiceStatus "$_type" "$_srv"
+	_ret=$?
+	if [ "$LSB_STAT_RUNNING" != "$_ret" -a "$LSB_STAT_NOT_RUNNING" != "$_ret" ]; then
+		synoha_log "Service $_srv still error after restart. (sh status, retcode=$_ret)"
+		return $LSB_ERR_GENERIC
+	fi
+	return $LSB_SUCCESS
+}
+
+# check service status listed in $SERV_FILE_MON
+ServiceStatusHA()
+{
+	local _type=$SERV_TYPE_NONE
+	local _srv=
+	local _group=
+	local _ret=
+
+	date > $SYNO_HA_STATUS_CHECK_LOG
+	echo "ServiceStatusHA start." >> $SYNO_HA_STATUS_CHECK_LOG
+	while read _line; do
+# new format: samba,builtin=yes
+# old format: samba,builtin
+		_srv=`echo $_line | cut -d "," -f1`
+		_part2=`echo $_line | cut -d "," -f2`
+		_group=`echo $_part2 | cut -d "=" -f1`
+		_enabled=`echo $_part2 | cut -d "=" -f2`
+		_type=$SERV_TYPE_NONE
+
+		if $SYNOHA_BIN --service-skip $SERV_TYPE_MON $_srv; then
+			rm -f $HA_SERV_FAIL_PREFIX$_srv
+			continue
+		fi
+
+		if [ "$_enabled" == "no" ]; then
+			continue
+		fi
+
+		case "$_group" in
+		$SERV_GROUP_BUILTIN)
+			if $SYNOSERVICECFG_BIN --list | grep -q "^${_srv}$"; then
+				_type=$SERV_TYPE_SYNO_SERVICE
+			else
+				continue
+			fi
+			;;
+		$SERV_GROUP_PACKAGE)
+			_type=$SERV_TYPE_SYNO_PKG
+			;;
+		*)
+			continue
+			;;
+		esac
+
+		if [ -f $HA_SERV_FAIL_PREFIX$_srv ]; then
+			continue
+		fi
+		date >> $SYNO_HA_STATUS_CHECK_LOG
+		echo "check start: $_type $_srv" >> $SYNO_HA_STATUS_CHECK_LOG
+		CheckStatus $_type $_srv
+		_ret=$?
+		date >> $SYNO_HA_STATUS_CHECK_LOG
+		echo "check end: $_ret" >> $SYNO_HA_STATUS_CHECK_LOG
+		if [ "$LSB_SUCCESS" != "$_ret" ]; then
+			$SYNOHA_BIN --notify fail-over "service failed" $_srv "$LOCAL_HOST" "$REMOTE_HOST"
+			touch $HA_SERV_FAIL_PREFIX$_srv
+		fi
+	done < $SERV_FILE_MON
+
+	date >> $SYNO_HA_STATUS_CHECK_LOG
+	echo "ServiceStatusHA end." >> $SYNO_HA_STATUS_CHECK_LOG
+	return $LSB_SUCCESS
+}
+
+# $1: skip process list
+kill_many_processes()
+{
+	if [ $# != 1 ]; then
+		return $LSB_ERR_GENERIC
+	fi
+
+	skip=$1
+
+	for file in /proc/[0-9]*; do
+		if [ "$file" == "/proc/1" ]; then
+			# skip init
+			continue;
+		fi
+
+		cmd=`readlink $file/exe`
+		if [ "$cmd" == "" ]; then
+			# skip kernel module
+			continue;
+		fi
+
+		cmd=`basename $cmd`
+		if `echo "$skip" | grep -q "$cmd"`; then
+			continue;
+		fi
+
+		pid=`echo $file | cut -d "/" -f 3`
+		kill_proc_id $pid
+	done
+}
+
+# if read from pipe : $1->level (default is err)
+# if $# == 1 : $1->message (level will be err)
+# if $# == 2 : $1->level, $2->message
+synoha_log()
+{
+	local _level="$1"
+	local _level_str="ERROR"
+	local _msg="$1"
+
+	case "$_level" in
+		err)
+			_level_str="ERROR"
+			;;
+		warning)
+			_level_str="WARN"
+			;;
+		notice)
+			_level_str="NOTICE"
+			;;
+		info)
+			_level_str="INFO"
+			;;
+	esac
+
+	# ls -l | synoha_log
+	if [ -p /proc/self/fd/0 ]; then
+		[ $# == 0 ] && _level="err"
+		_msg="`cat -`"
+	else
+		if [ $# == 1 ]; then
+			# synoha_log "`ls -l`"
+			_level="err"
+		else
+			# synoha_log info "`ls -l`"
+			_msg="$2"
+		fi
+	fi
+
+	logger -t "synoha[$$]" -p user.$_level "[HA-$_level_str] $_msg"
+}
+
+# remove heartbeat ip (drbd ip and ha original ip) from /etc/hosts
+remove_hbip_from_hosts()
+{
+	if grep "\<$DRBD_IP0\>" -q $SYNOETCHOSTS ; then
+		grep -v "\<$DRBD_IP0\>" $SYNOETCHOSTS > $SYNOETCHOSTSTMP
+		if [ -f $SYNOETCHOSTSTMP ]; then
+			mv $SYNOETCHOSTSTMP $SYNOETCHOSTS
+		fi
+	fi
+	if grep "\<$DRBD_IP1\>" -q $SYNOETCHOSTS ; then
+		grep -v "\<$DRBD_IP1\>" $SYNOETCHOSTS  > $SYNOETCHOSTSTMP
+		if [ -f $SYNOETCHOSTSTMP ]; then
+			mv $SYNOETCHOSTSTMP $SYNOETCHOSTS
+		fi
+	fi
+	if grep "\<$NODE_IP0\>" -q $SYNOETCHOSTS ; then
+		grep -v "\<$NODE_IP0\>" $SYNOETCHOSTS  > $SYNOETCHOSTSTMP
+		if [ -f $SYNOETCHOSTSTMP ]; then
+			mv $SYNOETCHOSTSTMP $SYNOETCHOSTS
+		fi
+	fi
+	if grep "\<$NODE_IP1\>" -q $SYNOETCHOSTS ; then
+		grep -v "\<$NODE_IP1\>" $SYNOETCHOSTS  > $SYNOETCHOSTSTMP
+		if [ -f $SYNOETCHOSTSTMP ]; then
+			mv $SYNOETCHOSTSTMP $SYNOETCHOSTS
+		fi
+	fi
+
+}
+
+# add heartbeat ip (drbd ip and ha original ip) to /etc/hosts
+add_hbip_to_hosts()
+{
+	remove_hbip_from_hosts
+	if [ "x$LOCAL_HOST" == "x$NODE_HOST0" ]; then
+		if ! grep "\<$DRBD_IP0\>" -q $SYNOETCHOSTS ; then
+			echo -e "$DRBD_IP0\t$LOCAL_HOST" >> /etc/hosts
+		fi
+		if ! grep "\<$NODE_IP0\>" -q $SYNOETCHOSTS ; then
+			echo -e "$NODE_IP0\t$LOCAL_HOST" >> /etc/hosts
+		fi
+	else
+		if ! grep "\<$DRBD_IP1\>" -q /etc/hosts ; then
+			echo -e "$DRBD_IP1\t$LOCAL_HOST" >> /etc/hosts
+		fi
+		if ! grep "\<$NODE_IP1\>" -q $SYNOETCHOSTS ; then
+			echo -e "$NODE_IP1\t$LOCAL_HOST" >> /etc/hosts
+		fi
+	fi
+}
+
+# remove cluster ip (ha main ip) from /etc/hosts
+remove_haip_from_hosts()
+{
+	[ -z "$HA_IP_MAIN" ] && synoha_log "can't find HA IP on $HA_IF_MAIN" && exit 1
+
+	if grep "\<$HA_IP_MAIN\>" -q $SYNOETCHOSTS ; then
+		grep -v "\<$HA_IP_MAIN\>" $SYNOETCHOSTS > $SYNOETCHOSTSTMP
+		if [ -f $SYNOETCHOSTSTMP ]; then
+			mv $SYNOETCHOSTSTMP $SYNOETCHOSTS
+		fi
+	fi
+}
+
+# add cluster ip (ha main ip) to /etc/hosts
+add_haip_to_hosts()
+{
+	[ -z "$HA_IP_MAIN" ] && synoha_log "can't find HA IP on $HA_IF_MAIN" && exit 1
+
+	remove_haip_from_hosts
+	if ! grep "\<$HA_IP_MAIN\>" -q $SYNOETCHOSTS ; then
+		echo -e "$HA_IP_MAIN\t$HA_HOSTNAME" >> /etc/hosts
+	fi
+}
+
+# add drbd ip to correspond drbd if from ha.conf
+add_drbdip_to_drbdif()
+{
+	[ -z "$DRBD_IF" -o -z "$DRBD_NETMASK" ] && return
+	[ -z "$DRBD_IP0" -a -z "$DRBD_IP1" ] && return
+	if [ "x$LOCAL_HOST" == "x$NODE_HOST0" ]; then
+		ifconfig ${DRBD_IF}:DRBD $DRBD_IP0 netmask ${DRBD_NETMASK}
+	else
+		ifconfig ${DRBD_IF}:DRBD $DRBD_IP1 netmask ${DRBD_NETMASK}
+	fi
+}
+
+passive_enter_ups_safemode()
+{
+	synoha_log notice "Let passive server enter UPS safe mode"
+	/usr/bin/crm_node --node="$REMOTE_HOST" --mesg="$AIS_PASSIVE_ENTER_UPS_SAFEMODE"
+}
+
+# foo() {} # test function
+#
+# if HASleepFor foo 30 3 &> /dev/null; then
+#		# test foo() per 3 seconds is success in 30 seconds
+# else
+#		# foo() is failed
+# fi
+HASleepFor()
+{
+	local _test_func=$1
+	local _sleep_timeout_sec=${2:=30}
+	local _sleep_sec=${3:=3}
+	[ 0 -eq $_sleep_sec ] && return $LSB_ERR_GENERIC
+	local _sleep_max_times=$(( $_sleep_timeout_sec / $_sleep_sec ))
+	local _sleep_count=0
+	local _timeout=$LSB_SUCCESS
+	while :; do
+		$_test_func &>/dev/null && break
+		_sleep_count=$(( $_sleep_count + 1 ))
+		if [ $_sleep_count -gt $_sleep_max_times ]; then
+			_timeout=$LSB_ERR_GENERIC
+			break
+		fi
+		sleep $_sleep_sec
+	done
+
+	echo $(( $_sleep_count * $_sleep_sec ))
+	return $_timeout
+}
+
+# report remote status if remote
+#     online
+#     warning_online
+HAHasRemote()
+{
+	$SYNOHA_BIN --remote-status | cut -d':' -f2 | grep -e $SYNO_HA_STATUS_ONLINE -e $SYNO_HA_STATUS_WARNING_ONLINE
+}
+
+HAWaitCibInfoReady()
+{
+	# wait max 120 seconds for remote cib info file ready
+	local REMOTE_CIB_INFO_READY=true
+	local count=0
+	while [ $count -lt 120 ]; do
+		REMOTE_CIB_INFO_READY=true
+		for cib_file in $CIB_INFO_REMOTE_FILES; do
+			if ! [ -f ${cib_file} ]; then
+				REMOTE_CIB_INFO_READY=false
+				break
+			fi
+		done
+		$REMOTE_CIB_INFO_READY && break
+
+		count=$((count+1))
+		sleep 1
+	done
+}
+
+# This function will reset local(echo b to sysrq) if:
+#   a. sync command complete in 5 seconds
+#   b. timeout
+DoFenceLocal()
+{
+	local count=0
+
+	synoha_log notice "notify remote before fencing local"
+	crm_node --node="$REMOTE_HOST" --mesg="FENCING DONE    "
+
+	synoha_log warning "reboot local in 5 seconds"
+	{
+		sync; sync; sync
+		echo b > /proc/sysrq-trigger
+	}&
+
+	sleep 5
+	echo b > /proc/sysrq-trigger
+}
+
+handle_too_active()
+{
+	# reason will be:
+	#   too_active     by rc.ha handle-too-active(pacemaker too_active)
+	#   TRYFENCE       by rc.subr handle_too_active()
+	local reason="$1"
+	local cib_epoch=`cibadmin -Ql | grep epoch | awk '{print $2}'`
+	local drbd_res_count=`find $HA_PREFIX/etc/drbd.d -name "*.res" | wc -l`
+
+	if [ "0" = "$drbd_res_count" ]; then
+		synoha_log notice "There is no DRBD resource at all. Bypass both-active check."
+		rm -f $FLAG_HA_TOO_ACTIVE_BOTH_ACTIVE
+	fi
+
+	if [ -f $FLAG_HA_TOO_ACTIVE_BOTH_ACTIVE ]; then
+		return 1
+	fi
+
+	synoha_log warning "Handle ${reason} situation! ${cib_epoch} [${LOCAL_HOST},${REMOTE_HOST}]"
+	crm_mon -n1 | awk '{print "=>",$0;}' | synoha_log warning
+	cibadmin -Q | grep location | grep DUMMY | awk '{print "=>",$0;}' | synoha_log warning
+
+	# check local is passive?
+	if [ ! -f "$FLAG_HA_SXX_ROLE_PREACTIVE" ]; then
+		synoha_log notice "Local need to be fenced, standby local [${LOCAL_HOST}]"
+		crm node standby ${LOCAL_HOST} &
+		DoFenceLocal
+		return 0
+	fi
+
+	# local is active
+	if [ "x$reason" == "xTRYFENCE" ]; then
+		synoha_log notice "both active!! remote will run split-brain handler..."
+		synoha_log notice "skip TRYFENCE from remote"
+		touch $FLAG_HA_TOO_ACTIVE_BOTH_ACTIVE
+		return 1
+	fi
+
+	# check remote got fenced in 60 seconds...
+	remote_offline_or_fenced()
+	{
+		crm_node --node="$REMOTE_HOST" --mesg="FENCING TRYFENCE"
+		if [ -f $FLAG_HA_REMOTE_IS_FENCED ]; then
+			synoha_log notice "got remote is fenced flag"
+			return 0
+		fi
+		if $SYNOHA_BIN --remote-status | cut -d':' -f2 | grep -q -e "$SYNO_HA_STATUS_OFFLINE" -e "$SYNO_HA_STATUS_WARNING_OFFLINE" ; then
+			synoha_log notice "remote offline"
+			return 0
+		fi
+		return 1
+	}
+	if ! HASleepFor remote_offline_or_fenced 60 1 &>/dev/null ; then
+		synoha_log notice "remote is active too, handle split-brain"
+		return 1
+	fi
+
+	sleep 10
+	synoha_log notice "Remote got fenced, handle ${reason} finished!"
+	crm node online ${LOCAL_HOST}
+	synoha --remove-local-constraint
+	crm_mon -n1 | awk '{print "=>",$0;}' | synoha_log notice
+	cibadmin -Q | grep location | grep DUMMY | awk '{print "=>",$0;}' | synoha_log notice
+	# $FLAG_HA_REMOTE_IS_FENCED on active node will be cleaned when passive reboot finished
+}
+
+get_ping_server()
+{
+	crm_resource --resource PING_SERVER_ --get-parameter host_list | tr -d "\n"
+}
+
+#
+# Check  ping server availability
+# $1: hostname
+#
+# return: whether ping server is available
+#         1 for not available
+#         0 for available
+check_ping_server()
+{
+	local hostname=$1
+
+	if $SYNOHA_BIN --check-ping-server $hostname; then 
+		return 0
+	else
+		return 1
+	fi
+}
+
+get_admin_epoch()
+{
+	cibadmin -Ql | sed -n 's/.*admin_epoch=\"\([0-9]*\)\".*/\1/p'
+}
+
+bump_admin_epoch()
+{
+	synoha_log warning "Original cib admin_epoch `get_admin_epoch`"
+	cibadmin --modify --xml-text '<cib admin_epoch="admin_epoch++"/>'
+	synoha_log warning "Bump cib admin_epoch to `get_admin_epoch`"
+}
+
+set_ping_server_constraint()
+{
+	[ $# -ne 1 ] && return
+
+	local h=$1
+
+	cibadmin --create -X '<configuration><constraints><rsc_location id="RULE_PING_SERVER" node="'$h'" rsc="DUMMY_START" score="-INFINITY"/></constraints></configuration>' &> /dev/null
+}
+
+unset_ping_server_constraint()
+{
+	cibadmin -D --xpath '//rsc_location[@id="RULE_PING_SERVER"]' &> /dev/null
+}
+
+get_ping_server_constraint()
+{
+	cibadmin -Q --xpath '//rsc_location[@id="RULE_PING_SERVER"]' &> /dev/null
+}
+
+check_active_in_ups_safemode()
+{
+	if [ ! -f "$SZF_HA_IN_UPS_SAFEMODE" ]; then
+		synoha_log notice "HA is not in ups safe mode. Stop checking active's status"
+		exit 0
+	fi
+
+	synoha_log notice "Wait until enter UPS safe mode"
+	while ! $SYNO_BOOT_BIN --is-safe-shutdown; do
+		sleep 1;
+	done
+
+	synoha_log notice "Wait until active down"
+	while ping $DRBD_IP_REMOTE -c 1 &> /dev/null; do
+		sleep 1
+	done
+
+	synoha_log notice "Checking active's status"
+	while ! ping $DRBD_IP_REMOTE -c 1 &> /dev/null; do
+		sleep 1
+	done
+
+	synoha_log notice "Detected active server, recovering from UPS safe mode"
+	rm -f $SZF_HA_IN_UPS_SAFEMODE
+	$SYNO_BOOT_BIN --unset-safe-shutdown
+	telinit 6
+}
+
+enter_ups_safemode()
+{
+	synoha_log notice "Passive entering UPS safe mode"
+	$SYNO_BOOT_BIN --set-safe-shutdown
+	reboot
+	sync; sync; sync;
+	check_active_in_ups_safemode &
+}
+
+check_and_compress()
+{
+	local tarball=$1
+	local folder=$2
+	if [ ! -f $tarball ]; then
+		/bin/tar cpf $tarball $folder
+	fi
+}
+
+check_and_decompress()
+{
+	local tarball=$1
+	if [ -f $tarball ]; then
+		/bin/tar xpf $tarball -C /
+		rm -f $tarball
+	fi
+}
+
+ha_safemode_backup_user_settings()
+{
+	check_and_compress $HA_SB_DESKTOP_SETTING /usr/syno/etc/preference
+	check_and_compress $HA_SB_SYNOSERVICE_SETTING /usr/syno/etc/synoservice.override
+}
+
+ha_safemode_restore_user_settings()
+{
+	check_and_decompress $HA_SB_DESKTOP_SETTING
+	check_and_decompress $HA_SB_SYNOSERVICE_SETTING
+}
+
+check_if_skip_seq_io_for_ssd_cache()
+{
+	local SZF_FCACHE_CONF=/usr/syno/etc/flashcache.conf
+	local SZF_VSPACE_CONF=/etc/space/vspace_layer.conf
+	local space_uuid=""
+	local skip_seq_io=0
+	local space_path=""
+	local ssd_path=""
+	local drbd_space_dev=""
+	local space_dev=""
+	local ssd_dev=""
+	local drbd_conn_state=""
+	local is_drbd_syncing=0
+	local target_value=0
+	local current_value=0
+	local sysctl_key=""
+
+	while read line; do
+		echo $line | grep -q FCACHE
+		[ 0 -ne $? ] && continue
+
+		# Get configs
+		space_uuid=`echo $line | cut -d "=" -f 1`
+		skip_seq_io=`get_section_key_value $SZF_FCACHE_CONF $space_uuid SkipSeqIO`
+		space_path=`get_section_key_value $SZF_FCACHE_CONF $space_uuid SpacePath`
+		ssd_path=`get_section_key_value $SZF_FCACHE_CONF $space_uuid SSDDevPath`
+
+		# Get devices
+		# Variable        From              To
+		# =============================================
+		# drbd_space_dev  /dev/vg1/iscsi_1  vg1-iscsi_1
+		#                 /dev/md2          md2
+		# =============================================
+		# space_dev       vg1-iscsi_1       iscsi_1
+		#                 md2               md2
+		# =============================================
+		# ssd_dev         /dev/md3          md3
+		drbd_space_dev=`echo $space_path | awk -F / '{ if (4 == NF) { print $3"-"$4 } else { print $3 } }'`
+		space_dev=`echo $drbd_space_dev | awk -F - '{ print $NF }'`
+		ssd_dev=`echo $ssd_path | awk -F / '{ print $NF }'`
+		sysctl_key="dev.flashcache_${ssd_dev}+${space_dev}.skip_seq_thresh_kb"
+
+		# Get DRBD status
+		drbd_conn_state=`drbdadm cstate $drbd_space_dev`
+		[ "$drbd_conn_state" = "SyncSource" -o "$drbd_conn_state" = "SyncTarget" ]
+		is_drbd_syncing=$?
+
+		# Compare and set
+		# In case user changed the setting during DRBD resynchronization
+		current_value=`sysctl $sysctl_key | awk '{ print $NF }'`
+
+		if [ 0 -eq $is_drbd_syncing ]; then
+			target_value=1024
+		elif [ 1 -eq $skip_seq_io ]; then
+			target_value=1024
+		else
+			target_value=0
+		fi
+
+		if [ $current_value -ne $target_value ]; then
+			sysctl -w "${sysctl_key}=${target_value}" &> /dev/null
+		fi
+	done < $SZF_VSPACE_CONF
+}
+
+set_haip_as_gateway_src()
+{
+	local IFNAME="$1"
+	local ip=""
+	local RULE="`ip route | grep default`"
+
+	# for (ovs_)eth* and bond* individually
+	for i in "" "bond_" ; do
+		# max 12 interfaces
+		for j in `seq 0 1 11` ; do
+			# for ovs_eth* and eth* both
+			[ "`get_key_value $HA_INFO ha_${i}if_enabled${j}`" != "true" ] && continue
+			[ "`get_key_value $HA_INFO ha_${i}if${j}`" != "$IFNAME" ] && continue
+			ip="`get_key_value $HA_INFO ha_${i}ip${j}`"
+			break;
+		done
+		[ -n "$ip" ] && break
+	done
+
+	if [ -n "$ip" ] && ! echo $RULE | grep "src $ip"; then
+		RULE="`echo $RULE | awk '$6 == "src" { $6=$7=""; print; next } { print }'`"
+		CMD="ip route replace ${RULE} src $ip"
+		synoha_log info "$CMD"
+
+		eval "$CMD"
+	fi
+}
+
+unset_haip_as_gateway_src()
+{
+	$SYNONETDTOOL --refresh-gateway -4
+}
+

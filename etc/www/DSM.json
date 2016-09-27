@@ -1,0 +1,21 @@
+
+{
+	"directAccess" : false,
+	"fqdn" : null,
+	"https" : 
+	{
+		"compatibility" : 1,
+		"compression" : true,
+		"hsts" : false
+	},
+	"port" : 81,
+	"ssl" : 
+	{
+		"certificate" : "/usr/syno/etc/ssl/ssl.chain.crt/server.crt",
+		"key" : "/usr/syno/etc/ssl/ssl.key/server.key",
+		"port" : 5543,
+		"redirect" : false,
+		"spdy" : false
+	},
+	"version" : 1
+}

@@ -1,0 +1,70 @@
+#!/bin/sh
+# Copyright (c) 2000-2010 Synology Inc. All rights reserved.
+
+HA_PREFIX="/usr/syno/synoha"
+SERVICE="/etc.defaults/rc.volume"
+SYNOVSPACE="/usr/syno/bin/synovspace"
+HA_RC_VOLUME_UMOUMT_ERR="/var/log/ha.rc_volume_umount_error"
+
+. $HA_PREFIX/etc.defaults/rc.subr
+
+case "$1" in
+	start|startall)
+		synoha_log notice "rc.volume $1"
+		if [ "$1" == "start" ]; then
+			$SYNOVSPACE -stage-load after ha
+		else # startall
+			# skip ha layer
+			$SYNOVSPACE -all-unload
+			$SYNOVSPACE -all-load
+		fi
+		# re-generate fstab before start volume for HA
+		/usr/syno/cfgen/s00_synocheckfstab
+		$HA_PREFIX/sbin/synoha --check-remote-ssd-cache
+
+		$SERVICE start
+		;;
+	stop|stopall)
+		synoha_log notice "rc.volume $1"
+		$HA_PREFIX/sbin/synoha --umount-all-volume
+		$HA_PREFIX/sbin/synoha --umount-all-external
+		time_end=$((`date +%s`+300))
+		volCnt=`cat /proc/mounts | awk '$2 ~ /^\/volume/ {print}' | wc -l`
+		while [ $volCnt -ne 0 ] && [ $time_end -gt `date +%s` ]; do
+			synoha_log "Failed to unmount, try again after 10 seconds."
+			sleep 10
+			$HA_PREFIX/sbin/synoha --umount-all-volume
+			$HA_PREFIX/sbin/synoha --umount-all-external
+			volCnt=`cat /proc/mounts | awk '$2 ~ /^\/volume/ {print}' | wc -l`
+		done
+		if [ $volCnt -ne 0 ]; then
+			synoha_log "Failed to unmount and timed out."
+			/bin/ps axjfw > $HA_RC_VOLUME_UMOUMT_ERR
+			ls -l /proc/*/fd >> $HA_RC_VOLUME_UMOUMT_ERR
+			cat /proc/*/maps >> $HA_RC_VOLUME_UMOUMT_ERR
+			cat /sys/kernel/config/target/core/iblock_*/*/udev_path >> $HA_RC_VOLUME_UMOUMT_ERR
+			cat /proc/mounts >> $HA_RC_VOLUME_UMOUMT_ERR
+			cat /proc/mounts | awk '$2 ~ /^\/volume/ {print}' | while read line; do
+				echo "/proc/mounts: $line" | synoha_log
+			done
+			exit 1
+		fi
+		if [ "$1" == "stop" ]; then
+			$SYNOVSPACE -stage-unload before ha
+		else # stopall
+			# skip ha layer
+			$SYNOVSPACE -all-unload
+		fi
+		;;
+	restart)
+		$SERVICE $1
+		;;
+	status)
+		$SERVICE $1
+		;;
+	*)
+		$SERVICE $1
+		;;
+esac
+exit 0
+

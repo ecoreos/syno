@@ -1,0 +1,4 @@
+#!/bin/sh
+/usr/bin/php -n -d safe_mode_exec_dir=/usr/syno/bin -d extension=json.so \
+/usr/syno/synoman/webman/modules/Indexer/indexer.php \
+-u -d $1 --indexdbdir $2

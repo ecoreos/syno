@@ -1,0 +1,70 @@
+#!/bin/sh
+set -u
+
+op=$1
+
+toolName=`basename $0`
+cacheSupportPin=`/bin/get_key_value /etc.defaults/synoinfo.conf cache_support_pin`
+tool=synocachepinfiletool
+
+print()
+{
+	local msg=$1
+	echo "$toolName: $msg"
+}
+
+if test "$cacheSupportPin" != "yes" ; then
+	print "This model doesn't support cache pin file feature"
+	exit 0
+fi
+
+DoOperation()
+{
+	local op=$1
+	local volumes=$(grep /volume /etc/fstab | awk '{ printf("%s \n", $2) }')
+	local volumeSupportPin=""
+	local fail=0
+
+	for vol in $volumes; do
+		volumeSupportPin=`$tool --support-pin --mount-path $vol`
+
+		if test "$volumeSupportPin" = "Yes" ; then
+			if test "$op" == "reload-blocks" ; then
+				print  "Do reload blocks on volume $vol"
+				$tool --reload-blocks --mount-path $vol
+				if test "$?" != "0" ; then
+					print "Reload blocks on volume $vol failed"
+					fail=1
+				fi
+			elif test "$op" == "unpin-all" ; then
+				print  "Unpin all pin blocks on volume $vol"
+				$tool --unpin-all --mount-path $vol
+				if test "$?" != "0" ; then
+					print  "Unpin all pin blocks on volume $vol failed"
+					fail=1
+				fi
+			else
+				print "Unknown operation = $op"
+				fail=1
+			fi
+		fi
+	done
+
+	return $fail
+}
+
+case "$op" in
+	--reload-blocks)
+		DoOperation "reload-blocks"
+		exit $?
+		;;
+	--unpin-all)
+		DoOperation "unpin-all"
+		exit $?
+		;;
+	*)
+		print "Unknwon op = $op"
+		exit 1
+		;;
+esac
+

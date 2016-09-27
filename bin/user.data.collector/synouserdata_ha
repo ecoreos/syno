@@ -1,0 +1,123 @@
+#!/bin/sh
+#Copyright (c) 2010-2014 Synology Inc. All rights reserved.
+
+if [ "yes" != "`get_key_value /etc/synoinfo.conf runha`" ]; then
+  echo "{}"
+  exit 0
+fi
+
+ETHTOOL="/usr/bin/ethtool"
+SYNOHA_CONF="/usr/syno/etc/synoha/ha.conf"
+IS_HYBRID=`get_key_value ${SYNOHA_CONF} is_hybrid`
+BUILDTIME=`get_key_value ${SYNOHA_CONF} begin_time`
+HEARTBEAT_IF=`get_key_value ${SYNOHA_CONF} drbd_if`
+HA_MAIN_IF=`get_key_value ${SYNOHA_CONF} ha_if_main`
+NODE0=`get_key_value ${SYNOHA_CONF} host0`
+NODE1=`get_key_value ${SYNOHA_CONF} host1`
+LOCAL_NAME=`/usr/syno/synoha/sbin/synoha --local-name`
+INTERFACES=`ls /etc/sysconfig/network-scripts/*eth* | xargs -n 1 basename | cut -d- -f2`
+SYNC_LIST=`ls /usr/syno/etc/synoha/drbd.d/*.res | xargs -n 1 basename | sed 's/\.res$//'`
+ISCSI_TARGETS=`ls /sys/kernel/config/target/iscsi/ 2>/dev/null | grep -v "discovery_auth\|lio_version"`
+HAS_10G_ETH=0
+DATA_READY=0
+VSPACE_FCACHE=`cat /tmp/vspace_layer.status 2>/dev/null | grep "FCACHE" | wc -l`
+VSPACE_SNAPSHOT=`cat /tmp/vspace_layer.status 2>/dev/null | grep "SNAPSHOT_ORG" | wc -l`
+
+echo -n "{"
+
+# !!!!! After version change, MODIFY synodatacollect-ui too !!!!!
+echo -n "\"collector_version\": 2,"
+# !!!!! After version change, MODIFY synodatacollect-ui too !!!!!
+
+echo -n "\"is_hybrid\": \"${IS_HYBRID}\","
+
+################# version 1
+if [ -f "/tmp/ha/info_node.local" ]; then
+    DATA_READY=1
+    if [ -f "/tmp/ha/info_node.remote" ]; then
+        DATA_READY=2
+    fi
+fi
+
+echo -n "\"data_ready\": ${DATA_READY},"
+
+if [ "${NODE0}" = "${LOCAL_NAME}" ]; then
+  [ ${DATA_READY} -ge 1 ] && echo -n "\"model_0\": \"`get_key_value /tmp/ha/info_node.local NODE_MODEL`\","
+  [ ${DATA_READY} -eq 2 ] && echo -n "\"model_1\": \"`get_key_value /tmp/ha/info_node.remote NODE_MODEL`\","
+else
+  [ ${DATA_READY} -eq 2 ] && echo -n "\"model_0\": \"`get_key_value /tmp/ha/info_node.remote NODE_MODEL`\","
+  [ ${DATA_READY} -ge 1 ] && echo -n "\"model_1\": \"`get_key_value /tmp/ha/info_node.local NODE_MODEL`\","
+fi
+
+if [ "${NODE0}" = "${LOCAL_NAME}" ]; then
+  [ ${DATA_READY} -ge 1 ] && echo -n "\"mem_size_0\": `get_key_value /tmp/ha/info_node.local NODE_MEMSIZE`,"
+  [ ${DATA_READY} -eq 2 ] && echo -n "\"mem_size_1\": `get_key_value /tmp/ha/info_node.remote NODE_MEMSIZE`,"
+else
+  [ ${DATA_READY} -eq 2 ] && echo -n "\"mem_size_0\": `get_key_value /tmp/ha/info_node.remote NODE_MEMSIZE`,"
+  [ ${DATA_READY} -ge 1 ] && echo -n "\"mem_size_1\": `get_key_value /tmp/ha/info_node.local NODE_MEMSIZE`,"
+fi
+
+for interface in ${INTERFACES}; do
+  speed=`${ETHTOOL} ${interface} 2> /dev/null | grep Speed | sed 's/[^0-9]*//g'`
+  [ "${speed}" = "10000" ] && let 'HAS_10G_ETH=HAS_10G_ETH+1'
+done
+echo -n "\"has_10g_eth\": \"${HAS_10G_ETH}\","
+
+echo -n "\"drbd_sync_list\": [\""
+echo -n ${SYNC_LIST} | sed 's/ /", "/g'
+echo -n "\"],"
+
+echo -n "\"using_interfaces\": ["
+count=0
+for interface in ${INTERFACES}; do
+  is_up=`${ETHTOOL} ${interface} 2> /dev/null | grep "Link detected" | sed 's/.*\(yes\|no\)/\1/g'`
+  if [ -n "${is_up}" ]; then
+    bond=`get_key_value /etc/sysconfig/network-scripts/ifcfg-${interface} MASTER`
+    [ "$count" != "0" ] && echo -n ","
+    echo -n "\"${interface}"
+    [ -n "${bond}" ] && echo -n "-${bond}"
+    echo -n "\""
+    let 'count=count+1'
+  fi
+done
+echo -n "],"
+
+echo -n "\"iscsi_initiator\": ["
+count=0
+for target in ${ISCSI_TARGETS}; do
+  if [ -f "/sys/kernel/config/target/iscsi/${target}/tpgt_0/conn" ]; then
+    initiators=`sed 's/IQN=\(.*\),IP.*/\1/' /sys/kernel/config/target/iscsi/${target}/tpgt_0/conn | xargs | sed 's/ /","/g'`
+    if [ -n "${initiators}" ]; then
+        [ "${count}" != "0" ] && echo -n ","
+        echo -n "\"${initiators}\""
+        let 'count=count+1'
+    fi
+  fi
+done
+echo -n "],"
+
+echo -n "\"ha_main_if\": \"${HA_MAIN_IF}\","
+
+echo -n "\"heartbeat_if\": \"${HEARTBEAT_IF}\","
+
+echo -n "\"build_time\": ${BUILDTIME},"
+
+################# version 2
+if [ "0" = "$VSPACE_FCACHE" ]; then
+	VSPACE_FCACHE="false"
+else
+	VSPACE_FCACHE="true"
+fi
+echo -n "\"vspace_fcache\": \"${VSPACE_FCACHE}\","
+
+if [ "0" = "$VSPACE_SNAPSHOT" ]; then
+	VSPACE_SNAPSHOT="false"
+else
+	VSPACE_SNAPSHOT="true"
+fi
+
+echo -n "\"vspace_snapshot\": \"${VSPACE_SNAPSHOT}\""
+
+################# version ???
+
+echo -n "}"

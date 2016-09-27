@@ -1,0 +1,45 @@
+#!/bin/sh
+# Copyright (c) 2000-2014 Synology Inc. All rights reserved.
+
+
+TIMEOUT=5  # timeout in seconds
+
+GetKeyValue() {  # <key>
+	local value=`grep "^$1 " $NSLCD_CONF | cut -d' ' -f2`
+	[ -z "$value" ] && { echo "Invalid '$1' in $NSLCD_CONF"; exit 0; }
+	echo $value
+}
+
+NSLCD_CONF=/usr/syno/etc/nslcd.conf
+LDAP_SECRET=/usr/syno/etc/private/ldap.secret
+
+# absence of these files means LDAP not binded
+[ -f $NSLCD_CONF ] || { echo "'$NSLCD_CONF' not eixst!"; exit 0; }
+[ -f $LDAP_SECRET ] || { echo "'$LDAP_SECRET' not eixst!"; exit 0; }
+
+HOST=`GetKeyValue uri`
+ENC_METHOD=`GetKeyValue ssl`
+BASE_DN=`GetKeyValue base`
+BIND_DN=`GetKeyValue binddn`
+BIND_PW=`cat $LDAP_SECRET`
+
+case "$ENC_METHOD" in
+	no|ssl)
+		;;
+	start_tls)
+		ENC_OPTION="-Z"
+		;;
+	*)
+		echo "Unknown encryption method '$ENC_METHOD'!"
+		exit 0
+		;;
+esac
+
+/usr/bin/ldapsearch $ENC_OPTION -LLLxH $HOST -b $BASE_DN -D $BIND_DN -w $BIND_PW -s base -o nettimeout=$TIMEOUT > /dev/null 2>&1
+if [ $? -eq 0 ]; then
+	echo "Connected!"
+	exit 0
+else
+	echo "Disconnected!"
+	exit 1
+fi

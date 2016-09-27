@@ -1,0 +1,22 @@
+# filter rules for directory /var
+# Lsyncd only support global exclude/include
+# rules that are anchored at the "root of transfer"
++ /spool/
++ /spool/webapi/
+- /spool/webapi/*
++ /log/
++ /log/synosur.log
++ /log/audio_debug_msg*
++ /log/dms.log*
++ /log/lighttpd/
+- /log/*
++ /lib/
++ /lib/ha/
++ /lib/ha/sync/
+- /lib/ha/*
++ /lib/samba/
+- /lib/*
++ /packages/
++ /services/
++ /synobackup/
+- /*

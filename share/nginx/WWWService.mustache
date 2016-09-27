@@ -1,0 +1,46 @@
+server {
+    listen 80 default_server{{#reuseport}} reuseport{{/reuseport}};
+    listen [::]:80 default_server{{#reuseport}} reuseport{{/reuseport}};
+    listen 443 default_server ssl{{#reuseport}} reuseport{{/reuseport}};
+    listen [::]:443 default_server ssl{{#reuseport}} reuseport{{/reuseport}};
+
+    server_name _;
+
+    {{> /usr/syno/share/nginx/X-Accel}}
+
+    include app.d/www.*.conf;
+    include app.d/alias.*.conf;
+    include /usr/syno/share/nginx/conf.d/www.*.conf;
+    include conf.d/www.*.conf;
+
+    {{! DEPRECATED: backward compatibility for MAT (#89503)}}
+    location = /webman/pingpong.php {
+        rewrite /webman/pingpong.php /webman/pingpong.cgi break;
+
+        root /usr/syno/synoman;
+        include scgi_params;
+        scgi_pass synoscgi;
+    }
+    {{! package disable page's logo}}
+    location = /webdefault/images/logo.jpg {
+        alias /usr/syno/share/nginx/logo.jpg;
+    }
+
+    {{> /usr/syno/share/nginx/error_page}}
+    {{> /usr/syno/share/nginx/LetsEncrypt}}
+    {{! for webstation super location block}}
+    {{! should be placed at the end of this server block}}
+    {{! but before redirect 80 to 5000 location}}
+    include app.d/.location.webstation.conf*;
+
+    location ~ ^/$ {
+        {{#DSM.ssl.port}}
+        if ($scheme = https) {
+            rewrite / https://$host:{{DSM.ssl.port}}/ redirect;
+        }
+        {{/DSM.ssl.port}}
+        {{#DSM.port}}
+        rewrite / http://$host:{{DSM.port}}/ redirect;
+        {{/DSM.port}}
+    }
+}

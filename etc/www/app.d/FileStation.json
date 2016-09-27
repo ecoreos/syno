@@ -1,0 +1,18 @@
+{
+   "application": "File Station",
+   "id": "SYNO.SDS.App.FileStation3.Instance",
+   "alias": "file",
+   "fqdn": "file.example.com",
+   "https": {
+       "hsts": false,
+       "http2": false
+   },
+   "alternatePort": {
+     "http": 7000,
+     "https": 7001
+   },
+   "injectable": false,
+   "index": "index.cgi",
+   "root": "/usr/syno/synoman",
+   "version": 2
+}

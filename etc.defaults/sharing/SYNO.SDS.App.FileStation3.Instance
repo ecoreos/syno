@@ -1,0 +1,9 @@
+{
+	"unique_mobile_page": true,
+	"plugins": [{
+		"name": "custom_page",
+		"params": {
+				"lib": "/usr/lib/sharing/plugin/SYNO.SDS.App.FileStation3.Instance.so"
+		}
+	}]	
+}

@@ -1,0 +1,7 @@
+# $PREFIX/etc/corosync/service.d/pcmk
+
+service {
+	# Load the Pacemaker cluster resource manager
+	name: pacemaker
+	ver: 1
+}

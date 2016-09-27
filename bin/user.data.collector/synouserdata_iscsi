@@ -1,0 +1,403 @@
+#!/usr/bin/env python
+import subprocess
+import re
+import json
+import os
+
+syno_default_conf_path = '/etc/synoinfo.conf'
+version_path = '/etc.defaults/VERSION'
+configfs_path = '/config'
+iscsi_targets_path = configfs_path + '/target/iscsi'
+iscsi_target_conf_path = '/usr/syno/etc/iscsi_target.conf'
+iscsi_mapping_conf_path = '/usr/syno/etc/iscsi_mapping.conf'
+plugin_config_path = '/tmp/synocomm_iss.conn'
+plugin_vss_prefix = 'SynoVssService'
+plugin_vmware_prefix = 'APP-REQLISTEN'
+
+class KeyValueRecorder:
+    def __init__(self):
+        self.keyValueDict = {}
+
+    def addListOfKeyValue(self, kvList):
+
+        for x in kvList:
+            self.keyValueDict[x[0].strip()] = x[1].split()[0]
+
+    def findKeyValue(self, key):
+        if key in self.keyValueDict:
+            return self.keyValueDict[key]
+        else:
+            return -1
+
+
+class OutputManager:
+    def __init__(self):
+        self.result_dict = {}
+
+    def add_result_pair(self, result_key, result_value):
+        self.result_dict[result_key] = result_value
+
+    def output_result(self):
+        print json.dumps(self.result_dict)
+
+
+class GlobalVariableManager():
+    active_iscsi_target_list = []
+    iscsi_target_list = {}
+
+    def __init__(self):
+        pass
+
+    @staticmethod
+    def variable_initialization():
+        GlobalVariableManager.iscsi_target_list_initialization()
+
+    @staticmethod
+    def iscsi_target_list_initialization():
+        cmd = 'ls ' + iscsi_targets_path
+        read_result = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE).stdout.read().split(os.linesep)
+
+        for read_content in read_result:
+
+            if read_content.startswith('iqn'):
+                GlobalVariableManager.active_iscsi_target_list.append(read_content)
+
+        cmd = 'cat ' + iscsi_target_conf_path + ' | grep iqn'
+        read_result = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE).stdout.read().split(os.linesep)
+        cmd = 'cat ' + iscsi_target_conf_path + ' | grep tid'
+        tid_read_result = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE).stdout.read().split(os.linesep)
+
+        for (read_content,tid_read_content) in zip(read_result,tid_read_result):
+
+            if '' == read_content:
+                continue
+
+            read_list = read_content.split('=')
+            iqn = read_list[1]
+
+            tid_read_list = tid_read_content.split('=')
+            tid = tid_read_list[1]
+            GlobalVariableManager.iscsi_target_list[iqn.lower()] = 'T' + str(tid)
+
+    @staticmethod
+    def get_active_iscsi_target_list():
+        return GlobalVariableManager.active_iscsi_target_list
+
+    @staticmethod
+    def get_iscsi_target_list():
+        return GlobalVariableManager.iscsi_target_list.keys()
+
+    @staticmethod
+    def get_iscsi_target_tid_by_iqn(target_iqn):
+        if target_iqn.lower() in GlobalVariableManager.iscsi_target_list:
+            return GlobalVariableManager.iscsi_target_list[target_iqn.lower()]
+        else:
+            return -1
+
+
+class PluginInformationGetter:
+    def __init__(self):
+        pass
+
+    def get_plugin_information(self, output_manager):
+
+        if os.path.isfile(plugin_config_path):
+            output_result = {}
+            cmd = 'cat ' + plugin_config_path + ' | grep cid'
+            read_result = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE).stdout.read().split(os.linesep)
+            vss_plugin_count = 0
+            vmware_plugin_count = 0
+
+            for read_content in read_result:
+
+                if read_content == '':
+                    continue
+
+                read_list = read_content.split('=')
+                cid_result = read_list[1]
+
+                if cid_result.startswith(plugin_vss_prefix):
+                    vss_plugin_count += 1
+                elif cid_result.startswith(plugin_vmware_prefix):
+                    vmware_plugin_count += 1
+
+            if 0 < vss_plugin_count:
+                output_result['vss_plugin_count'] = vss_plugin_count
+
+            if 0 < vmware_plugin_count:
+                output_result['vmware_plugin_count'] = vmware_plugin_count
+
+            if 0 < vmware_plugin_count or 0 < vss_plugin_count:
+                output_manager.add_result_pair('iscsi_plugin', output_result)
+
+    def perform_collection(self, output_manager):
+        self.get_plugin_information(output_manager)
+
+
+class TargetInformationGetter:
+    def __init__(self):
+        self.target_dict_by_iqn = {}
+
+    def get_target_initiator_information(self, output_manager):
+
+        for target_iqn in GlobalVariableManager.get_active_iscsi_target_list():
+            iscsi_target_conn_path = iscsi_targets_path + '/' + target_iqn + '/tpgt_1/dynamic_sessions'
+            cmd = 'cat ' + iscsi_target_conn_path
+            read_result = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE).stdout.read().replace("\x00", "")
+
+            if '' == read_result:
+                continue
+
+            result_list = str(read_result).split(os.linesep)
+            conn_count = 0
+            target_initiator_list = []
+
+            for res in result_list:
+
+                if '' != res:
+                    list_of_result = res.split(',')
+                    initiator_iqn = list_of_result[0].split('=')[1]
+                    initiatorIP  = list_of_result[1].split('=')[1]
+                    initiatorCID = list_of_result[2].split('=')[1]
+
+                    #Getting type name only
+                    initiator_iqn = initiator_iqn.split('.')[3]
+                    initiator_iqn = initiator_iqn.split(':')[0]
+                    target_initiator_list.append(initiator_iqn)
+                    conn_count += 1
+
+            if target_iqn.lower() in self.target_dict_by_iqn:
+                self.target_dict_by_iqn[target_iqn.lower()]['conn_count'] = conn_count
+                self.target_dict_by_iqn[target_iqn.lower()]['initiator_list'] = target_initiator_list
+
+    def get_target_mapping_information(self, output_manager):
+
+        for target_iqn in GlobalVariableManager.get_iscsi_target_list():
+            tid = GlobalVariableManager.get_iscsi_target_tid_by_iqn(target_iqn)
+            if tid != -1:
+                cmd = 'cat '  + iscsi_mapping_conf_path + ' | grep ' + tid + '_ | wc -l '
+                read_result = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE).stdout.read()
+                lun_count = int(read_result)
+
+                if target_iqn in self.target_dict_by_iqn:
+                    self.target_dict_by_iqn[target_iqn.lower()]['mapped_lun_count'] = lun_count
+
+    def get_target_information(self, output_manager):
+
+        for target_iqn in GlobalVariableManager.get_iscsi_target_list():
+            self.target_dict_by_iqn[target_iqn.lower()] = {}
+
+        self.get_target_mapping_information(output_manager)
+        self.get_target_initiator_information(output_manager)
+        self.target_info_to_output_manager(output_manager)
+
+    def perform_collection(self, output_manager):
+        self.get_target_information(output_manager)
+
+    def target_output_transformation(self, target_info_dict):
+        target_output_dict = {}
+
+        target_output_dict['mapped_lun_count'] = target_info_dict['mapped_lun_count']
+
+        if 'conn_count' in target_info_dict:
+            target_output_dict['conn_count'] = target_info_dict['conn_count']
+        else:
+            target_output_dict['conn_count'] = 0
+
+        if 'initiator_list' in target_info_dict:
+            target_output_dict['initiator_list'] = target_info_dict['initiator_list']
+        else:
+            target_output_dict['initiator_list'] = []
+
+        return target_output_dict
+
+    def target_list_output_transformation(self):
+        self.target_info_dict_output_list = []
+
+        for target_info_dict_key in self.target_dict_by_iqn.keys():
+            self.target_info_dict_output_list.append( self.target_output_transformation(self.target_dict_by_iqn[target_info_dict_key]) )
+
+    def target_info_to_output_manager(self, output_manager):
+        self.target_list_output_transformation()
+        output_manager.add_result_pair('target_list', self.target_info_dict_output_list)
+
+
+class LUNInformationGetter:
+    def __init__(self):
+        self.adv_lun_count = 0
+        self.lun_info_dict_list = []
+
+    def sd_only(self, sd_name):
+        return re.sub(r'[^a-zA-Z]', '', sd_name)
+
+    def sas_only(self, sas_name):
+        pattern = re.compile('^sas[0-9]*')
+        match_group = re.match(pattern, sas_name)
+        return match_group.group(0)
+
+    def is_adv_lun(self, lun_info_dict):
+        return 'ADV' == lun_info_dict['lun_type']
+
+    def lun_type_transform(self, lun_info_dict):
+
+        if 'THIN' == lun_info_dict['lun_type']:
+            return 'regular_thin'
+
+        if 'FILE' == lun_info_dict['lun_type']:
+            return 'regular_thick'
+
+        if 'ADV' == lun_info_dict['lun_type']:
+            return 'advanced'
+
+        if 'BLOCK' == lun_info_dict['lun_type']:
+            return 'block'
+
+    def get_md_id_by_md_dev(self, lun_md_dev):
+
+        if lun_md_dev.startswith('/dev/md'):
+            md_id = lun_md_dev.split('/')[2]
+            return md_id
+        else:
+            return None
+
+    def get_vg_id_by_lun_volume_root(self, lun_volume_root):
+        vg_id = lun_volume_root.split('/')[2]
+        return vg_id
+
+    def get_md_path_on_volumegroup_by_lun_volume_root(self, lun_volume_root):
+        vg_id = self.get_vg_id_by_lun_volume_root(lun_volume_root)
+        cmd = 'vgdisplay -v ' + vg_id + ' 2>/dev/null | grep \"PV Name\"'
+        read_result = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE).stdout.read().split(os.linesep)
+        read_list = read_result[0].split()
+        return read_list[2]
+
+    def disk_list_transform(self, lun_info_dict):
+
+        disk_list = []
+        lun_md_dev = ''
+
+        if 'multiple' == self.volume_type_transform(lun_info_dict):
+            lun_md_dev = self.get_md_path_on_volumegroup_by_lun_volume_root(lun_info_dict['lun_volume_root'])
+        else:
+            lun_md_dev = lun_info_dict['lun_volume_root']
+
+        md_id = self.get_md_id_by_md_dev(lun_md_dev)
+
+        if None != md_id:
+            cmd = 'cat /proc/mdstat | grep ' + md_id
+            read_result = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE).stdout.read().split()
+
+            for md_element in read_result:
+                if md_element.startswith('sd'):
+                    disk_list.append( self.sd_only(md_element) )
+                elif md_element.startswith('sas'):
+                    disk_list.append( self.sas_only(md_element) )
+
+        return disk_list
+
+    def volume_type_transform(self, lun_info_dict):
+
+        if 'BLOCK' == lun_info_dict['lun_type']:
+
+            if None != self.get_md_id_by_md_dev(str(lun_info_dict['lun_volume_root'])):
+                return 'single'
+            else:
+                return 'multiple'
+
+        return 'single'
+
+    def lun_output_transformation(self, lun_info_dict):
+        lun_output_dict = {}
+        lun_output_dict['volume_type'] = self.volume_type_transform(lun_info_dict)
+
+        if 'BLOCK' == lun_info_dict['lun_type']:
+            lun_output_dict['disks'] = self.disk_list_transform(lun_info_dict)
+
+        lun_output_dict['lun_size'] = lun_info_dict['lun_size']
+        lun_output_dict['lun_type'] = self.lun_type_transform(lun_info_dict)
+        lun_output_dict['extent_based'] = (lun_info_dict['lun_type'] == 'ADV')
+
+        if True == lun_output_dict['extent_based']:
+            lun_output_dict['snapshot_count'] = lun_info_dict['snapshot_count']
+            lun_output_dict['extent_size'] = lun_info_dict['extent_size']
+            lun_output_dict['rep_count'] = lun_info_dict['rep_count']
+
+        return lun_output_dict
+
+    def lun_list_output_transformation(self):
+        self.lun_info_dict_output_list = []
+
+        for lun_info_dict in self.lun_info_dict_list:
+            self.lun_info_dict_output_list.append( self.lun_output_transformation(lun_info_dict) )
+
+    def lun_info_to_output_manager(self, output_manager):
+        self.lun_list_output_transformation()
+        output_manager.add_result_pair('lun_list', self.lun_info_dict_output_list)
+
+    def gather_lun_information(self, lun):
+        lun_info_dict = {}
+        lun_kv_value_list = [x.split(':') for x in lun.split(',')]
+
+        kvRecorder = KeyValueRecorder()
+        kvRecorder.addListOfKeyValue(lun_kv_value_list)
+
+        lun_info_dict['uuid'] = kvRecorder.findKeyValue('uuid')
+        lun_info_dict['lun_id'] = kvRecorder.findKeyValue('lun_id')
+        lun_info_dict['lun_name'] = kvRecorder.findKeyValue('name')
+        lun_info_dict['lun_size'] = kvRecorder.findKeyValue('size')
+        lun_info_dict['lun_type'] = kvRecorder.findKeyValue('type')
+        lun_info_dict['lun_volume_root'] = kvRecorder.findKeyValue('location')
+        lun_info_dict['extent_size'] = kvRecorder.findKeyValue('extent_size')
+
+        return lun_info_dict
+
+    def get_lun_information(self, output_manager):
+        cmd = 'synoiscsiwebapi lun list for_udc | grep uuid'
+        read_result = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE).stdout.read().split(os.linesep)
+        lun_information_list = read_result
+
+        for lun in lun_information_list:
+
+            if '' == lun:
+                continue
+
+            lun_info_dict = self.gather_lun_information(lun)
+
+            if self.is_adv_lun(lun_info_dict):
+                self.gather_snapshot_information(lun_info_dict)
+                self.gather_rep_information(lun_info_dict)
+                self.adv_lun_count += 1
+
+            self.lun_info_dict_list.append(lun_info_dict)
+
+        self.lun_info_to_output_manager(output_manager)
+
+    def gather_rep_information(self, lun_info_dict):
+        cmd = 'synoiscsiwebapi rep list | grep \'src_lun_uuid: ' + str(lun_info_dict['uuid']) + '\' | wc -l'
+        read_result = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE).stdout.read()
+        lun_info_dict['rep_count'] = int(read_result)
+
+    def gather_snapshot_information(self, lun_info_dict):
+        cmd = 'synoiscsiwebapi lun list_snapshot ' + str(lun_info_dict['uuid']) + ' | grep uuid | wc -l'
+        read_result = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE).stdout.read()
+        lun_info_dict['snapshot_count'] = int(read_result)
+
+    def perform_collection(self, output_manager):
+        self.get_lun_information(output_manager)
+
+
+def main ():
+    GlobalVariableManager.variable_initialization()
+
+    output_manager = OutputManager()
+    target_information_getter = TargetInformationGetter()
+    lun_information_getter = LUNInformationGetter()
+    plugin_information_getter = PluginInformationGetter()
+
+    target_information_getter.perform_collection(output_manager)
+    lun_information_getter.perform_collection(output_manager)
+    plugin_information_getter.perform_collection(output_manager)
+
+    output_manager.output_result()
+
+main()

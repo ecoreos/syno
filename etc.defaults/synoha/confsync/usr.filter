@@ -1,0 +1,46 @@
+# filter rules for directory /usr
+# Lsyncd only support global exclude/include
+# rules that are anchored at the "root of transfer"
++ /syno/
++ /syno/etc/
+- /syno/etc/*.sh
+- /syno/etc/*.sql
+- /syno/etc/httpd-*-sys
+- /syno/etc/AppleVolumes.system
+- /syno/etc/afp_signature.conf
+- /syno/etc/afpd.conf
+- /syno/etc/cacert.pem
+- /syno/etc/indexdb/appindexdb/
+- /syno/etc/manutil.conf
+- /syno/etc/mimetypes.txt
+- /syno/etc/nslcd.conf.template
+- /syno/etc/printer_hotplug.blacklist
+- /syno/etc/rc.*
+- /syno/etc/scemd.xml
+- /syno/etc/usb.map
+- /syno/etc/usbdev.conf
+- /syno/etc/flashcache.conf
+- /syno/etc/.rmw.md*
++ /syno/etc/synoha/
++ /syno/etc/synoha/ha.conf
++ /syno/etc/synoha/serv.base.conf
++ /syno/etc/synoha/serv.mon.conf
++ /syno/etc/synoha/serv.must.conf
++ /syno/etc/synoha/serv.other.conf
+- /syno/etc/synoha/*
++ /syno/synoman/
++ /syno/synoman/webman/
++ /syno/synoman/webman/3rdparty/
+- /syno/synoman/webman/*
+- /syno/synoman/*
+- /syno/*
++ /local/
++ /local/lib/
+- /local/lib/python2.7/
++ /local/packages/
++ /local/packages/@appstore/
+- /local/packages/@appstore/Python
+- /local/doc/
+- /local/include/
+- /local/zarafa-licensed/var/
+- /*

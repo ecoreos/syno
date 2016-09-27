@@ -1,0 +1,23 @@
+{
+	"brand-new-start-stop-job": ["ntpd", "ftpd", "webdav-httpd", "avahi", "sshd"],
+	"hup-replace-by-restart-job": ["sftpd", "sshd", "minissdpd"],
+	"skip-action-service": {
+		"ha-on-passive": ["hotplugd", "dbus", "synonetd", "apparmor", "synoovs-db", "synoovs-vswitch", "syslog-ng", "synologrotate", "snmp"],
+		"ha-keep-session": ["synorelayd", "nmbd", "dbus", "avahi", "DSM", "nginx", "httpd-avahi", "hotplugd", "apparmor", "synonetd", "nslcd",
+			"synoovs-db", "synoovs-vswitch", "syslog-ng", "synocgid"],
+		"ha-safe-mode": ["synorelayd", "nmbd", "dbus", "avahi", "DSM", "nginx", "httpd-avahi", "hotplugd", "apparmor", "synonetd",
+			"nslcd", "ssh-shell", "findhost", "ftpd", "ftpd-ssl", "atalk", "nfsd", "samba", "support-remote-access", "synoovs-db",
+			"synoovs-vswitch", "syslog-ng", "synocgid"],
+		"dsm-upgrade-skip-service": ["synorelayd", "DSM", "nginx", "winbindd", "apparmor", "synomount", "nslcd", "ssh-shell", "nmbd", "avahi",
+			"synoguestcommd", "synoguestcmdd",
+			"synoovs-db", "synoovs-vswitch", "telnetd", "dbus", "dc-output", "findhost", "hotplugd", "ldap-server", "ssdp",
+			"support-remote-access", "synoconfd", "synonetd", "synovpnclient", "synowifid", "ups-net", "ups-usb", "synovfsd", "syslog-acc",
+			"synocgid"],
+		"smallupdate-skip-service": ["synorelayd", "DSM", "nginx", "winbindd", "apparmor", "synomount", "nslcd",
+			"synoguestcommd", "synoguestcmdd",
+			"synoovs-db", "synoovs-vswitch", "syslog-acc", "synocgid"],
+		"systemdr-on-passive": ["hotplugd", "dbus", "synonetd", "apparmor", "DSM", "nginx", "synoguestcmdd", "synoguestcommd", "synobtrfsreplica",
+			"synocgid", "synologrotate", "iscsitrg"],
+		"timebkp-keep-session": ["DSM", "nginx", "synocgid", "apparmor", "ssh-shell"]
+	}
+}

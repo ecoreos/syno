@@ -1,0 +1,12 @@
+{
+	"bootup": {
+		"env": {},
+		"description": "run after DS start (need multi lang)_T('aaa','bbb')",
+		"example": "/bin/date >> /volume1/start_time $user1 $user2"
+	},
+	"shutdown": {
+		"env": {},
+		"description": "",
+		"example": "/bin/date >> /volume1/shutdown_time"
+	}
+}

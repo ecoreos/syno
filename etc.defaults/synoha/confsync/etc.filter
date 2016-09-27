@@ -1,0 +1,31 @@
+# filter rules for directory /etc
+# Lsyncd only support global exclude/include
+# rules that are anchored at the "root of transfer"
+- /dhclient/ipv4/
+- /fstab*
+- /firewall_*
+- /tc_*
+- /hostapd/
+- /hosts*
+- /hostname
+- /lvm/
+- /mtab*
+- /pam.d/
+- /ppp/
++ /sysconfig/
++ /sysconfig/network-scripts/
++ /sysconfig/network-scripts/ifcfg-tun
+- /sysconfig/network-scripts/*
+- /sysconfig/*
+- /space/
+- /security/
+- /portforward/routerdb/
+- /wide-dhcpv6/
+- /init/*.override
++ /iproute2/config/
++ /iproute2/config/gateway_database
++ /iproute2/config/default-gateway
++ /iproute2/config/static-table-rule
++ /iproute2/config/static-table-rule-v6
+- /iproute2/config/*
++ /*

@@ -1,0 +1,201 @@
+#!/bin/sh
+# Copyright (c) 2008-2010 Synology Inc. All rights reserved.
+
+if [ "x$1" = "x" -o "x$1" = "x-h" ]; then
+	echo "Copyright (c) 2008-2010 Synology Inc. All rights reserved."
+	echo "Usage: `basename $0` { online | lowbatt | nocomm | fsd }"
+	exit
+fi
+
+SYNOINFO="/etc/synoinfo.conf"
+UPSMode=`/bin/get_key_value $SYNOINFO ups_mode`
+RUN_HA=`get_key_value $SYNOINFO runha`
+SZF_HA_RC="/usr/syno/synoha/etc.defaults/rc.ha"
+SYNOBOOTBIN="/usr/syno/bin/synobootseq"
+case "${UPSMode}" in
+[Ss][Nn][Mm][Pp] | [Uu][Ss][Bb])
+	UPSMaster=1
+	EnabledKey="ups_enabled"
+	UPSMonServer="localhost"
+	;;
+*)
+	UPSMaster=0
+	EnabledKey="upsslave_enabled"
+	UPSMonServer=`/bin/get_key_value /etc/synoinfo.conf upsslave_server`
+	if [ "x$UPSMonServer" = "x" ]; then
+		UPSMonServer="localhost"
+	elif [ 0 -lt `echo ${UPSMonServer}|grep -c ':'` ]; then
+		UPSMonServer="[${UPSMonServer}]"
+	fi
+	;;
+esac
+
+UPSEnabled=`/bin/get_key_value /etc/synoinfo.conf ${EnabledKey}`
+case "$UPSEnabled" in
+[Yy][Ee][Ss])
+	;;
+*)
+	echo "UPS is not enable."
+	exit
+	;;
+esac
+
+UPSSafeShutdown=`/bin/get_key_value /etc/synoinfo.conf ups_safeshutdown`
+case "${UPSSafeShutdown}" in
+[Nn][Oo])
+	UPSSafeShutdown=0;;
+*)
+	UPSSafeShutdown=1;;
+esac
+
+SZF_SAFEMODE="/tmp/ups.safedown"
+SZF_SAFEMODE_DONE="/tmp/safeModeDone"
+
+SYSLOG() {
+	logger -p user.err -t synoups "$1"
+}
+
+UPSStatusGet() {
+	ups_stat=`/usr/bin/upsc ups@${UPSMonServer} ups.status 2>/dev/null`
+	if [ $? -ne 0 ]; then
+		echo "ERR"
+		return 255
+	fi
+	for status in $ups_stat ; do
+		case "$status" in
+		"OL"|"OB"|"LB")
+			echo "$status"
+			return
+			;;
+		esac
+	done
+	echo "ERR"
+}
+
+UPSShutdown() {
+	if [ $UPSMaster -ne 1 ]; then
+		echo "Slave waits for safe shutdown" >> $SZF_SAFEMODE
+		touch /var/.NormalShutdown
+		SYSLOG "UPS waits for safe shutdown."
+		return
+	fi
+	OL=0
+	LB=0
+	while [ $OL -ne 2 -a $LB -ne 2 ]; do
+		sleep 10
+		St=`UPSStatusGet`
+		if [ "$St" = "OL" ]; then
+			OL=`expr $OL + 1`
+			LB=0
+		else
+			LB=`expr $LB + 1`
+			OL=0
+		fi
+		echo "OL=$OL LB=$LB" >> $SZF_SAFEMODE
+	done
+	if [ $OL -eq 2 ]; then
+		synologset1 sys warn 0x11300012
+		echo "UPS back to On-Line and reboot." >> $SZF_SAFEMODE
+		$SYNOBOOTBIN --unset-safe-shutdown
+		telinit 6
+	elif [ $LB -eq 2 ]; then
+		touch /var/.NormalShutdown
+		if [ $UPSSafeShutdown -eq 0 ]; then
+			echo "Waiting UPS exhausted." >> $SZF_SAFEMODE
+			SYSLOG "Waiting UPS exhausted."
+		else
+			echo "UPS safe shutdown." >> $SZF_SAFEMODE
+			SYSLOG "UPS safe shutdown."
+			/usr/bin/upsdrvctl shutdown
+		fi
+	fi
+}
+
+UPSSafeMode() {
+	if [ -f $SZF_SAFEMODE ]; then
+		return
+	fi
+
+	$SYNOBOOTBIN --is-shutdown
+	if [ $? -eq 0 ]; then
+		SYSLOG "[UPS] System is shutting down. Ignore onbattery event."
+		return
+	fi
+
+	SYSLOG "[UPS] Check Boot Status."
+	$SYNOBOOTBIN --is-ready
+	while [ $? -ne 0 ]
+	do
+		sleep 2
+		$SYNOBOOTBIN --is-ready
+	done
+
+	St=`UPSStatusGet`
+	if [ "$St" = "OL" ]; then
+		echo "WARNING: UPS is On-Line"
+		return
+	fi
+	echo "$1" > $SZF_SAFEMODE
+
+	/usr/syno/bin/synologset1 sys warn 0x11300011
+	SYSLOG "[UPS] Server is going to Safe Mode. It will stop all services and umount all volumes."
+
+	if [ "yes" = "$RUN_HA" ]; then
+		$SZF_HA_RC ups-safemode
+	fi
+
+	$SYNOBOOTBIN --set-safe-shutdown
+	reboot
+	sync; sync; sync;
+
+	echo "Stop all services and umount all volumes" >> $SZF_SAFEMODE
+	UPSShutdown
+}
+
+UPSRestart() {
+	if [ ! -f $SZF_SAFEMODE ]; then
+		return
+	fi
+	echo "UPS back on-line, so wait to reboot" >> $SZF_SAFEMODE
+	sleep 30
+	St=`UPSStatusGet`
+	timeout=$((3*60))
+
+	if [ "$St" = "OL" ]; then
+		SYSLOG "[UPS] Check Safe Mode Done."
+		while [ ! -f $SZF_SAFEMODE_DONE ] && [ $timeout -gt 0 ]
+		do
+			sleep 2
+			timeout=`expr $timeout - 2`
+		done
+
+		if [ "yes" = "$RUN_HA" ]; then
+			$SZF_HA_RC ups-restart &
+		fi
+		synologset1 sys warn 0x11300012
+		SYSLOG "UPS back to On-Line and reboot."
+		$SYNOBOOTBIN --unset-safe-shutdown
+		telinit 6
+	fi
+}
+
+FLOCK_FILE="/tmp/synoups.lock"
+{
+flock -x 99
+
+case "$1" in
+online)
+	UPSRestart
+	;;
+lowbatt | nocomm)
+	UPSSafeMode $1
+	;;
+fsd)
+	/usr/sbin/upsmon -c fsd
+	UPSSafeMode $1
+	;;
+esac
+
+flock -u 99
+} 99>$FLOCK_FILE
+
